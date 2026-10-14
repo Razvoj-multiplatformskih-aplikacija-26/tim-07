@@ -1,0 +1,11 @@
+name: tim_07_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - apps/mobile
+  - apps/backoffice
+  - packages/domain
+  - packages/blocs

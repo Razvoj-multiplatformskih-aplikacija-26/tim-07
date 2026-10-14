@@ -1,0 +1,17 @@
+# Dart / Flutter
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Local configuration
+**/pubspec_overrides.yaml
+
+# System files
+.DS_Store
+Thumbs.db
