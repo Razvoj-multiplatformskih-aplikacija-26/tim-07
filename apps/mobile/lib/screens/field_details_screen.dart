@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../data/mock_reservations.dart';
 
 class FieldDetailsScreen extends StatefulWidget {
   final String name;
@@ -16,18 +18,54 @@ class FieldDetailsScreen extends StatefulWidget {
   });
 
   @override
-  State<FieldDetailsScreen> createState() => _FieldDetailsScreenState();
+  State<FieldDetailsScreen> createState() =>
+      _FieldDetailsScreenState();
 }
 
 class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
   DateTime selectedDate = DateUtils.dateOnly(DateTime.now());
+
+  static const List<String> times = [
+    '08:00 - 09:00',
+    '09:00 - 10:00',
+    '10:00 - 11:00',
+    '11:00 - 12:00',
+    '12:00 - 13:00',
+    '13:00 - 14:00',
+    '14:00 - 15:00',
+    '15:00 - 16:00',
+    '16:00 - 17:00',
+    '17:00 - 18:00',
+    '18:00 - 19:00',
+    '19:00 - 20:00',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    MockReservations.changes.addListener(refreshSlots);
+  }
+
+  void refreshSlots() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    MockReservations.changes.removeListener(refreshSlots);
+    super.dispose();
+  }
 
   Future<void> selectDate() async {
     final today = DateUtils.dateOnly(DateTime.now());
 
     final picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate.isBefore(today) ? today : selectedDate,
+      initialDate: selectedDate.isBefore(today)
+          ? today
+          : selectedDate,
       firstDate: today,
       lastDate: today.add(const Duration(days: 30)),
     );
@@ -39,51 +77,80 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
     }
   }
 
-  // Proverava da li je termin slobodan.
-  // Privremena simulacija na osnovu terena i datuma.
   bool isSlotAvailable(int index) {
+    final timeSlot = times[index];
+
+    // Proverava aktivne rezervacije za ovaj teren,
+    // datum i vremenski termin.
+    final alreadyReserved = MockReservations.reservations.any(
+          (reservation) =>
+      reservation.fieldName == widget.name &&
+          DateUtils.isSameDay(
+            reservation.date,
+            selectedDate,
+          ) &&
+          reservation.timeSlot == timeSlot &&
+          reservation.status != 'Otkazana',
+    );
+
+    if (alreadyReserved) {
+      return false;
+    }
+
+    // Pocetna simulacija zauzetih termina.
     final fieldCode = widget.name.runes.fold<int>(
       0,
           (sum, character) => sum + character,
     );
 
-    final dateCode = selectedDate.year * 10000 +
-        selectedDate.month * 100 +
-        selectedDate.day;
+    final dateCode =
+        selectedDate.year * 10000 +
+            selectedDate.month * 100 +
+            selectedDate.day;
 
     return (fieldCode + dateCode + index * 7) % 5 != 0;
   }
 
-  // Prikazuje sve termine za izabrani datum.
-  Widget buildTimeSlots() {
-    final times = [
-      '08:00 - 09:00',
-      '09:00 - 10:00',
-      '10:00 - 11:00',
-      '11:00 - 12:00',
-      '12:00 - 13:00',
-      '13:00 - 14:00',
-      '14:00 - 15:00',
-      '15:00 - 16:00',
-      '16:00 - 17:00',
-      '17:00 - 18:00',
-      '18:00 - 19:00',
-      '19:00 - 20:00',
-    ];
+  Future<void> openReservation(String timeSlot) async {
+    await context.push(
+      '/fields/reserve',
+      extra: (
+      fieldName: widget.name,
+      date: selectedDate,
+      timeSlot: timeSlot,
+      price: widget.pricePerHour,
+      ),
+    );
 
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Widget buildTimeSlots() {
     return Column(
       children: List.generate(times.length, (index) {
         final available = isSlotAvailable(index);
+        final timeSlot = times[index];
 
         return Card(
           child: ListTile(
+            onTap: available
+                ? () => openReservation(timeSlot)
+                : null,
             leading: Icon(
-              available ? Icons.check_circle : Icons.cancel,
-              color: available ? Colors.green : Colors.red,
+              available
+                  ? Icons.check_circle
+                  : Icons.cancel,
+              color: available
+                  ? Colors.green
+                  : Colors.red,
             ),
-            title: Text(times[index]),
+            title: Text(timeSlot),
             subtitle: Text(
-              available ? 'Slobodan termin' : 'Zauzet termin',
+              available
+                  ? 'Slobodan termin'
+                  : 'Zauzet termin',
             ),
             trailing: available
                 ? const Icon(Icons.chevron_right)
@@ -98,15 +165,13 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Formatiranje datuma: DD.MM.YYYY.
     final formattedDate =
         '${selectedDate.day.toString().padLeft(2, '0')}.'
         '${selectedDate.month.toString().padLeft(2, '0')}.'
         '${selectedDate.year}.';
 
-    // Broj slobodnih termina za izabrani datum.
     final availableCount = List.generate(
-      12,
+      times.length,
           (index) => isSlotAvailable(index),
     ).where((available) => available).length;
 
@@ -117,7 +182,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Slika / ikonica terena
           Container(
             height: 160,
             decoration: BoxDecoration(
@@ -133,7 +197,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           const SizedBox(height: 24),
 
-          // Naziv terena
           Text(
             widget.name,
             style: Theme.of(context).textTheme.headlineMedium,
@@ -141,7 +204,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           const SizedBox(height: 16),
 
-          // Lokacija
           Row(
             children: [
               const Icon(Icons.location_on_outlined),
@@ -154,7 +216,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           const SizedBox(height: 12),
 
-          // Sport
           Row(
             children: [
               const Icon(Icons.sports),
@@ -165,7 +226,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           const SizedBox(height: 12),
 
-          // Cena
           Row(
             children: [
               const Icon(Icons.payments_outlined),
@@ -185,7 +245,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
           const Divider(),
           const SizedBox(height: 16),
 
-          // Opis terena
           Text(
             'O terenu',
             style: Theme.of(context).textTheme.titleLarge,
@@ -201,7 +260,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           const SizedBox(height: 24),
 
-          // Dostupni termini
           Text(
             'Dostupni termini',
             style: Theme.of(context).textTheme.titleLarge,
@@ -209,7 +267,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           const SizedBox(height: 12),
 
-          // Dugme za izbor datuma
           OutlinedButton.icon(
             onPressed: selectDate,
             icon: const Icon(Icons.calendar_month),
@@ -218,9 +275,8 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           const SizedBox(height: 12),
 
-          // Brojač slobodnih termina
           Text(
-            'Slobodnih termina: $availableCount od 12',
+            'Slobodnih termina: $availableCount od ${times.length}',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: colorScheme.primary,
@@ -229,7 +285,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           const SizedBox(height: 12),
 
-          // Lista termina
           buildTimeSlots(),
         ],
       ),
