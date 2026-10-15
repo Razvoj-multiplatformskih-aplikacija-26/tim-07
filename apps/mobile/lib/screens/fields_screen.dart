@@ -64,6 +64,36 @@ class _FieldsScreenState extends State<FieldsScreen> {
     sport: 'Fudbal',
     price: 4000,
     ),
+    (
+    name: 'Olimpijski Bazen',
+    location: 'Vračar',
+    sport: 'Plivanje',
+    price: 1800,
+    ),
+    (
+    name: 'Volley Arena',
+    location: 'Zvezdara',
+    sport: 'Odbojka',
+    price: 2800,
+    ),
+    (
+    name: 'Futsal Centar',
+    location: 'Zemun',
+    sport: 'Fudbal',
+    price: 3200,
+    ),
+    (
+    name: 'Tenis Akademija',
+    location: 'Novi Beograd',
+    sport: 'Tenis',
+    price: 2200,
+    ),
+    (
+    name: 'Basket 3x3',
+    location: 'Karaburma',
+    sport: 'Košarka',
+    price: 1500,
+    )
   ];
 
   @override
