@@ -4,6 +4,7 @@ import '../screens/fields_screen.dart';
 import 'main_navigation.dart';
 import '../screens/reservations_screen.dart';
 import '../screens/field_details_screen.dart';
+import '../screens/reservation_form_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -47,6 +48,24 @@ class AppRouter {
                         location: field.location,
                         sport: field.sport,
                         pricePerHour: field.price,
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'reserve',
+                    builder: (context, state) {
+                      final reservation = state.extra as ({
+                      String fieldName,
+                      DateTime date,
+                      String timeSlot,
+                      int price,
+                      });
+
+                      return ReservationFormScreen(
+                        fieldName: reservation.fieldName,
+                        date: reservation.date,
+                        timeSlot: reservation.timeSlot,
+                        price: reservation.price,
                       );
                     },
                   ),
