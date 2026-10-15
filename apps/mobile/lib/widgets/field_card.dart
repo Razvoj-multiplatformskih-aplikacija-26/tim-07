@@ -28,6 +28,10 @@ class FieldCard extends StatelessWidget {
         return Icons.sports_tennis;
       case 'Padel':
         return Icons.sports_tennis;
+      case 'Plivanje':
+        return Icons.pool;
+      case 'Odbojka':
+        return Icons.sports_volleyball;
       default:
         return Icons.sports;
     }

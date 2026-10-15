@@ -31,7 +31,15 @@ class _FieldsScreenState extends State<FieldsScreen> {
     });
   }
 
-  final sports = ['Svi', 'Fudbal', 'Košarka', 'Tenis', 'Padel'];
+  final sports = [
+    'Svi',
+    'Fudbal',
+    'Košarka',
+    'Tenis',
+    'Padel',
+    'Plivanje',
+    'Odbojka',
+  ];
 
   final fields = [
     (
