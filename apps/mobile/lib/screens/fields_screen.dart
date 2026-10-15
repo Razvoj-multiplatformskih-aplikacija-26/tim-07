@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import '../widgets/field_card.dart';
+import 'package:go_router/go_router.dart';
 
 class FieldsScreen extends StatefulWidget {
   const FieldsScreen({super.key});
@@ -252,11 +253,23 @@ class _FieldsScreenState extends State<FieldsScreen> {
               itemBuilder: (context, index) {
                 final field = filteredFields[index];
 
+
                 return FieldCard(
                   name: field.name,
                   location: field.location,
                   sport: field.sport,
                   pricePerHour: field.price,
+                  onTap: () {
+                    context.push(
+                      '/fields/details',
+                      extra: (
+                      name: field.name,
+                      location: field.location,
+                      sport: field.sport,
+                      price: field.price,
+                      ),
+                    );
+                  },
                 );
               },
             ),
