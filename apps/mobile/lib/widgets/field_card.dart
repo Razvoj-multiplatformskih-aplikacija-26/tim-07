@@ -17,6 +17,23 @@ class FieldCard extends StatelessWidget {
     this.onTap,
   });
 
+
+  IconData get sportIcon {
+    switch (sport) {
+      case 'Fudbal':
+        return Icons.sports_soccer;
+      case 'Košarka':
+        return Icons.sports_basketball;
+      case 'Tenis':
+        return Icons.sports_tennis;
+      case 'Padel':
+        return Icons.sports_tennis;
+      default:
+        return Icons.sports;
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -34,7 +51,8 @@ class FieldCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    Icons.sports_soccer,
+                    sportIcon,
+                    size: 28,
                     color: colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
@@ -55,12 +73,15 @@ class FieldCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.sports, size: 18),
-                  const SizedBox(width: 6),
-                  Text(sport),
-                ],
+              Chip(
+                avatar: Icon(
+                  sportIcon,
+                  size: 18,
+                  color: colorScheme.primary,
+                ),
+                label: Text(sport),
+                backgroundColor: colorScheme.primaryContainer,
+                side: BorderSide.none,
               ),
               const SizedBox(height: 12),
               Align(
