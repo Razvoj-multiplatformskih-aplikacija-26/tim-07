@@ -1,5 +1,8 @@
-import '../data/mock_reservations.dart';
+
 import 'package:flutter/material.dart';
+import 'package:domain/domain.dart';
+
+import '../data/mock_reservations.dart';
 
 class ReservationFormScreen extends StatefulWidget {
   final String fieldName;
@@ -22,7 +25,12 @@ class ReservationFormScreen extends StatefulWidget {
 
 class _ReservationFormScreenState extends State<ReservationFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+
+  static const String _currentUserName = 'Marko Marković';
+
+  final _nameController = TextEditingController(
+    text: _currentUserName,
+  );
 
   @override
   void dispose() {
@@ -30,13 +38,47 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     super.dispose();
   }
 
+  DateTime _parseTime(String time) {
+    final parts = time.trim().split(':');
+
+    return DateTime(
+      widget.date.year,
+      widget.date.month,
+      widget.date.day,
+      int.parse(parts[0]),
+      int.parse(parts[1]),
+    );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
   void confirmReservation() {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Provera da termin nije već rezervisan.
+    final times = widget.timeSlot.split('-');
+
+    final startTime = _parseTime(times[0]);
+    final endTime = _parseTime(times[1]);
+
+    // Koristimo domensko pravilo za validaciju termina.
+    final validationError = validateReservationTime(
+      startTime: startTime,
+      endTime: endTime,
+      now: DateTime.now(),
+    );
+
+    if (validationError != null) {
+      _showMessage(validationError.message);
+      return;
+    }
+
+    // Privremena provera zauzetosti dok ne povezemo Bloc.
     final alreadyReserved = MockReservations.reservations.any(
           (reservation) =>
       reservation.fieldName == widget.fieldName &&
@@ -46,33 +88,22 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     );
 
     if (alreadyReserved) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ovaj termin je već rezervisan.'),
-        ),
-      );
+      _showMessage('Ovaj termin je već rezervisan.');
       return;
     }
 
-    // Čuvanje rezervacije u memoriji.
     MockReservations.add(
       fieldName: widget.fieldName,
       date: widget.date,
       timeSlot: widget.timeSlot,
-      customerName: _nameController.text.trim(),
+      customerName: _currentUserName,
       price: widget.price,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Rezervacija je uspešno kreirana!'),
-      ),
-    );
+    _showMessage('Rezervacija je uspešno kreirana!');
 
-    // Povratak na detalje terena.
     Navigator.of(context).pop();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -141,24 +172,13 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
 
             TextFormField(
               controller: _nameController,
+              readOnly: true,
               decoration: const InputDecoration(
                 labelText: 'Ime i prezime',
-                hintText: 'Unesite ime i prezime',
                 prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
+                helperText: 'Prijavljeni demo korisnik',
               ),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Ime i prezime su obavezni.';
-                }
-
-                if (value.trim().length < 3) {
-                  return 'Unesite najmanje 3 karaktera.';
-                }
-
-                return null;
-              },
             ),
 
             const SizedBox(height: 24),
