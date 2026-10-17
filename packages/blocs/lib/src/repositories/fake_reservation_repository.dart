@@ -10,7 +10,11 @@ final class FakeReservationRepository implements ReservationRepository {
   final List<FieldSchedule> _schedules;
   final List<BlockedPeriod> _blockedPeriods;
   final DateTime Function() _clock;
+  /// Kada je true, citanje rezervacija simulira gresku.
+  bool simulateError = false;
 
+  /// Kada je true, citanje rezervacija vraca praznu listu.
+  bool simulateEmpty = false;
   int _nextReservationId;
 
   FakeReservationRepository({
@@ -67,11 +71,21 @@ final class FakeReservationRepository implements ReservationRepository {
     throw StateError('Teren nije pronadjen.');
   }
 
+
   @override
   Future<List<Reservation>> getReservations() async {
+    if (simulateError) {
+      throw StateError('Simulirana greska pri ucitavanju rezervacija.');
+    }
+
+    if (simulateEmpty) {
+      return const [];
+    }
+
     _refreshStatuses();
     return List.unmodifiable(_reservations);
   }
+
 
   @override
   Future<List<Reservation>> getReservationsByUser(UserId userId) async {
