@@ -28,3 +28,6 @@ export 'src/rules/reservation_validation.dart';
 export 'src/rules/reservation_overlap.dart';
 export 'src/rules/reservation_blocked_periods.dart';
 export 'src/rules/reservation_working_hours.dart';
+
+// T09 — Repository port za rezervacije.
+export 'src/repositories/reservation_repository.dart';
