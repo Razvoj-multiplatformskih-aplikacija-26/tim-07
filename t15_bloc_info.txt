@@ -1,0 +1,135 @@
+﻿
+import 'package:equatable/equatable.dart';
+import 'package:domain/domain.dart';
+
+/// Osnovna klasa za sve dogaÄ‘aje rezervacija.
+sealed class ReservationEvent extends Equatable {
+  const ReservationEvent();
+
+  @override
+  List<Object?> get props => [];
+}
+
+/// UÄitavanje svih rezervacija.
+final class ReservationsRequested extends ReservationEvent {
+  const ReservationsRequested();
+}
+
+/// UÄitavanje rezervacija jednog korisnika.
+final class UserReservationsRequested extends ReservationEvent {
+  final UserId userId;
+
+  const UserReservationsRequested(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
+}
+
+/// UÄitavanje rezervacija jednog terena.
+final class FieldReservationsRequested extends ReservationEvent {
+  final FieldId fieldId;
+
+  const FieldReservationsRequested(this.fieldId);
+
+  @override
+  List<Object?> get props => [fieldId];
+}
+
+/// Kreiranje nove rezervacije.
+final class ReservationCreateRequested extends ReservationEvent {
+  final FieldId fieldId;
+  final UserId userId;
+  final DateTime startTime;
+  final DateTime endTime;
+
+  const ReservationCreateRequested({
+    required this.fieldId,
+    required this.userId,
+    required this.startTime,
+    required this.endTime,
+  });
+
+  @override
+  List<Object?> get props => [
+    fieldId,
+    userId,
+    startTime,
+    endTime,
+  ];
+}
+
+/// PotvrÄ‘ivanje rezervacije.
+final class ReservationConfirmRequested extends ReservationEvent {
+  final ReservationId reservationId;
+
+  const ReservationConfirmRequested(this.reservationId);
+
+  @override
+  List<Object?> get props => [reservationId];
+}
+
+/// Otkazivanje rezervacije.
+final class ReservationCancelRequested extends ReservationEvent {
+  final ReservationId reservationId;
+
+  const ReservationCancelRequested(this.reservationId);
+
+  @override
+  List<Object?> get props => [reservationId];
+}
+
+/// Check-in korisnika za rezervaciju.
+final class ReservationCheckInRequested extends ReservationEvent {
+  final ReservationId reservationId;
+
+  const ReservationCheckInRequested(this.reservationId);
+
+  @override
+  List<Object?> get props => [reservationId];
+}
+
+import 'package:domain/domain.dart';
+import 'package:equatable/equatable.dart';
+
+/// Osnovna klasa za sva stanja rezervacija.
+sealed class ReservationState extends Equatable {
+  const ReservationState();
+
+  @override
+  List<Object?> get props => [];
+}
+
+/// Pocetno stanje, pre bilo kakvog ucitavanja.
+final class ReservationInitial extends ReservationState {
+  const ReservationInitial();
+}
+
+/// Rezervacije se trenutno ucitavaju.
+final class ReservationLoading extends ReservationState {
+  const ReservationLoading();
+}
+
+/// Rezervacije su uspesno ucitane.
+final class ReservationLoaded extends ReservationState {
+  final List<Reservation> reservations;
+
+  const ReservationLoaded(this.reservations);
+
+  @override
+  List<Object?> get props => [reservations];
+}
+
+/// Nema rezervacija za prikaz.
+final class ReservationEmpty extends ReservationState {
+  const ReservationEmpty();
+}
+
+/// Doslo je do greske prilikom rada sa rezervacijama.
+final class ReservationError extends ReservationState {
+  final String message;
+
+  const ReservationError(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
