@@ -1,5 +1,7 @@
 
 // Terenzo — zajednički domenski modeli i pravila.
+// Ovaj paket koriste mobilna i backoffice aplikacija.
+// Ne zavisi od Flutter-a.
 
 // Tipizirani ID-jevi.
 export 'src/ids.dart';
@@ -14,6 +16,10 @@ export 'src/models/reservation.dart';
 export 'src/models/field_schedule.dart';
 export 'src/models/review.dart';
 
-// Pravila statusa rezervacija (T06).
+// T06 — Statusi i automatski životni ciklus rezervacije.
 export 'src/rules/reservation_transitions.dart';
 export 'src/rules/reservation_auto_status.dart';
+
+// T07 — Tipizirane greške i validacije.
+export 'src/rules/reservation_validation_error.dart';
+export 'src/rules/reservation_validation.dart';
