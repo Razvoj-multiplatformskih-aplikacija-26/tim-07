@@ -1,10 +1,7 @@
 
-// Terenzo — zajednički domenski modeli i tipovi.
-//
-// Ovaj paket koriste mobilna i backoffice aplikacija.
-// Ne zavisi od Flutter-a.
+// Terenzo — zajednički domenski modeli i pravila.
 
-// Tipizirani identifikatori.
+// Tipizirani ID-jevi.
 export 'src/ids.dart';
 
 // Enum tipovi.
@@ -16,3 +13,7 @@ export 'src/models/sports_field.dart';
 export 'src/models/reservation.dart';
 export 'src/models/field_schedule.dart';
 export 'src/models/review.dart';
+
+// Pravila statusa rezervacija (T06).
+export 'src/rules/reservation_transitions.dart';
+export 'src/rules/reservation_auto_status.dart';
