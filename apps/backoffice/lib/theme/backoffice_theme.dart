@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Tema backoffice aplikacije.
-///
-/// Koristi istu osnovnu boju kao mobilna aplikacija,
-/// ali gusci raspored prilagodjen vecim ekranima.
 abstract final class BackofficeTheme {
   static const Color primaryColor = Color(0xFF2E7D32);
 

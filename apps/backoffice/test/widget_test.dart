@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Backoffice prikazuje navigaciju i ucitane rezervacije',
+  testWidgets('Backoffice prikazuje navigaciju i tabelu rezervacija',
       (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -19,8 +19,11 @@ void main() {
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.text('Tereni'), findsOneWidget);
 
-    final count = BackofficeDemoData.createReservations().length;
-    expect(find.text('Učitano rezervacija: $count'), findsOneWidget);
+    final table = tester.widget<DataTable>(find.byType(DataTable));
+    expect(
+      table.rows.length,
+      BackofficeDemoData.createReservations().length,
+    );
   });
 
   testWidgets('Navigacija menja izabranu sekciju', (tester) async {

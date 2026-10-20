@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Privremeni sadrzaj za sekcije koje jos nisu implementirane.
 class PlaceholderPage extends StatelessWidget {
   final String title;
   final String message;
