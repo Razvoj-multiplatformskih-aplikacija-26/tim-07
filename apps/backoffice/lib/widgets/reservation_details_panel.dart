@@ -1,3 +1,4 @@
+import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -161,11 +162,93 @@ class _Details extends StatelessWidget {
             runSpacing: 8,
             children: [
               for (final to in transitions)
-                Chip(label: Text(actionLabel(reservation.status, to))),
+                _ActionButton(reservation: reservation, target: to),
             ],
           ),
       ],
     );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final Reservation reservation;
+  final ReservationStatus target;
+
+  const _ActionButton({required this.reservation, required this.target});
+
+  bool get _needsConfirmation => target == ReservationStatus.cancelled;
+
+  ReservationEvent? get _event {
+    return switch (target) {
+      ReservationStatus.confirmed =>
+        ReservationConfirmRequested(reservation.id),
+      ReservationStatus.cancelled => ReservationCancelRequested(reservation.id),
+      ReservationStatus.pending || ReservationStatus.completed => null,
+    };
+  }
+
+  Future<void> _onPressed(BuildContext context) async {
+    final event = _event;
+    if (event == null) {
+      return;
+    }
+
+    if (_needsConfirmation) {
+      final confirmed = await _confirm(context);
+      if (!confirmed || !context.mounted) {
+        return;
+      }
+    }
+
+    context.read<ReservationBloc>().add(event);
+  }
+
+  Future<bool> _confirm(BuildContext context) async {
+    final label = actionLabel(reservation.status, target);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('$label rezervaciju #${reservation.id.value}?'),
+        content: const Text('Ova radnja se ne može poništiti.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Odustani'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(label),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = Text(actionLabel(reservation.status, target));
+
+    if (_needsConfirmation) {
+      final error = Theme.of(context).colorScheme.error;
+
+      return OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: error,
+          side: BorderSide(color: error),
+        ),
+        onPressed: () => _onPressed(context),
+        child: label,
+      );
+    }
+
+    return FilledButton(onPressed: () => _onPressed(context), child: label);
   }
 }
 

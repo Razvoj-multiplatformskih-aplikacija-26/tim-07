@@ -64,8 +64,8 @@ void main() {
     await pumpPanel(tester);
     await select(tester, 2);
 
-    expect(find.widgetWithText(Chip, 'Potvrdi'), findsOneWidget);
-    expect(find.widgetWithText(Chip, 'Odbij'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Potvrdi'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Odbij'), findsOneWidget);
   });
 
   testWidgets('Zavrsena rezervacija nema dostupnih akcija', (tester) async {
