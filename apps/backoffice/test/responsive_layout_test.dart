@@ -21,7 +21,7 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      BackofficeApp(repository: createBackofficeRepository()),
+      BackofficeApp(repository: createBackofficeRepository(delay: Duration.zero)),
     );
     await tester.pumpAndSettle();
   }

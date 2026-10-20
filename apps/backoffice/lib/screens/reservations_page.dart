@@ -26,6 +26,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
   bool _tableFocused = false;
   bool _isWide = true;
   bool _narrowDetailsOpen = false;
+  List<Reservation>? _lastReservations;
 
   @override
   void dispose() {
@@ -266,31 +267,156 @@ class _ReservationsPageState extends State<ReservationsPage> {
     );
   }
 
+  Widget _withProgress(List<Reservation> reservations, {required bool loading}) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 4,
+          child: loading ? const LinearProgressIndicator() : null,
+        ),
+        Expanded(child: _buildLoaded(reservations)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ReservationBloc, ReservationState>(
       builder: (context, state) {
+        if (state is ReservationLoaded) {
+          _lastReservations = state.reservations;
+        }
+        if (state is ReservationEmpty || state is ReservationError) {
+          _lastReservations = null;
+        }
+
+        final previous = _lastReservations;
+
         return switch (state) {
-          ReservationLoaded(:final reservations) => _buildLoaded(reservations),
-          ReservationInitial() || ReservationLoading() =>
-            const _Message('Učitavanje rezervacija...'),
-          ReservationEmpty() => const _Message('Nema rezervacija.'),
-          ReservationError(:final message) => _Message('Greška: $message'),
+          ReservationLoaded(:final reservations) =>
+            _withProgress(reservations, loading: false),
+          ReservationInitial() || ReservationLoading() when previous != null =>
+            _withProgress(previous, loading: true),
+          ReservationInitial() || ReservationLoading() => const _LoadingView(),
+          ReservationEmpty() => _EmptyView(onReload: _reload),
+          ReservationError(:final message) =>
+            _ErrorView(message: message, onRetry: _reload),
         };
       },
     );
   }
 }
 
-class _Message extends StatelessWidget {
-  final String text;
-
-  const _Message(this.text);
+class _LoadingView extends StatelessWidget {
+  const _LoadingView();
 
   @override
   Widget build(BuildContext context) {
+    return const _StateView(
+      icon: CircularProgressIndicator(),
+      title: 'Učitavanje rezervacija...',
+    );
+  }
+}
+
+class _EmptyView extends StatelessWidget {
+  final VoidCallback onReload;
+
+  const _EmptyView({required this.onReload});
+
+  @override
+  Widget build(BuildContext context) {
+    return _StateView(
+      icon: Icon(
+        Icons.inbox_outlined,
+        size: 48,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      title: 'Nema rezervacija',
+      message: 'Trenutno nema rezervacija za vaše terene.',
+      action: OutlinedButton.icon(
+        autofocus: true,
+        onPressed: onReload,
+        icon: const Icon(Icons.refresh),
+        label: const Text('Osveži'),
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorView({required this.message, required this.onRetry});
+
+  String get _details => message.replaceFirst('Bad state: ', '');
+
+  @override
+  Widget build(BuildContext context) {
+    return _StateView(
+      icon: Icon(
+        Icons.error_outline,
+        size: 48,
+        color: Theme.of(context).colorScheme.error,
+      ),
+      title: 'Rezervacije nisu učitane',
+      message: _details,
+      action: FilledButton.icon(
+        autofocus: true,
+        onPressed: onRetry,
+        icon: const Icon(Icons.refresh),
+        label: const Text('Pokušaj ponovo'),
+      ),
+    );
+  }
+}
+
+class _StateView extends StatelessWidget {
+  final Widget icon;
+  final String title;
+  final String? message;
+  final Widget? action;
+
+  const _StateView({
+    required this.icon,
+    required this.title,
+    this.message,
+    this.action,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final message = this.message;
+    final action = this.action;
+
     return Center(
-      child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            icon,
+            const SizedBox(height: 16),
+            Text(title, style: theme.textTheme.titleMedium),
+            if (message != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (action != null) ...[
+              const SizedBox(height: 20),
+              action,
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
