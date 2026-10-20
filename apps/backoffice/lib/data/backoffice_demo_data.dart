@@ -6,7 +6,7 @@ abstract final class BackofficeDemoData {
     AppUser(
       id: const UserId(1),
       firstName: 'Jovan',
-      lastName: 'Petrovic',
+      lastName: 'Petrović',
       email: 'jovan.petrovic@example.com',
       phoneNumber: '0641111111',
       dateOfBirth: DateTime(1999, 3, 2),
@@ -16,7 +16,7 @@ abstract final class BackofficeDemoData {
     AppUser(
       id: const UserId(2),
       firstName: 'Ana',
-      lastName: 'Jovanovic',
+      lastName: 'Jovanović',
       email: 'ana.jovanovic@example.com',
       phoneNumber: '0642222222',
       dateOfBirth: DateTime(2001, 7, 19),
@@ -26,7 +26,7 @@ abstract final class BackofficeDemoData {
     AppUser(
       id: const UserId(3),
       firstName: 'Nikola',
-      lastName: 'Ilic',
+      lastName: 'Ilić',
       email: 'nikola.ilic@example.com',
       phoneNumber: '0643333333',
       dateOfBirth: DateTime(1997, 11, 5),
@@ -36,7 +36,7 @@ abstract final class BackofficeDemoData {
     AppUser(
       id: const UserId(4),
       firstName: 'Milica',
-      lastName: 'Savic',
+      lastName: 'Savić',
       email: 'milica.savic@example.com',
       phoneNumber: '0644444444',
       dateOfBirth: DateTime(2000, 1, 30),
@@ -154,23 +154,29 @@ abstract final class BackofficeDemoData {
     ];
   }
 
-  static String userName(UserId id) {
+  static AppUser? userById(UserId id) {
     for (final user in users) {
       if (user.id == id) {
-        return user.fullName;
+        return user;
       }
     }
 
-    return 'Korisnik #${id.value}';
+    return null;
   }
 
-  static String fieldName(FieldId id) {
+  static SportsField? fieldById(FieldId id) {
     for (final field in fields) {
       if (field.id == id) {
-        return field.name;
+        return field;
       }
     }
 
-    return 'Teren #${id.value}';
+    return null;
   }
+
+  static String userName(UserId id) =>
+      userById(id)?.fullName ?? 'Korisnik #${id.value}';
+
+  static String fieldName(FieldId id) =>
+      fieldById(id)?.name ?? 'Teren #${id.value}';
 }

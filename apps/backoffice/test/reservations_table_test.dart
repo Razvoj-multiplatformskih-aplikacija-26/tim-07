@@ -76,12 +76,4 @@ void main() {
     expect(selectedRows.length, 1);
     expect((selectedRows.single.key! as ValueKey<int>).value, 4);
   });
-
-  test('Formatiranje datuma i vremena', () {
-    final start = DateTime(2026, 3, 5, 9, 0);
-    final end = DateTime(2026, 3, 5, 10, 30);
-
-    expect(ReservationsTable.formatDate(start), '05.03.2026.');
-    expect(ReservationsTable.formatTime(start, end), '09:00 - 10:30');
-  });
 }

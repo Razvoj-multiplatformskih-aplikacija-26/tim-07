@@ -4,26 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../data/backoffice_demo_data.dart';
 import '../selection/reservation_selection_bloc.dart';
+import '../text/labels.dart';
 import 'reservation_status_chip.dart';
 
 class ReservationsTable extends StatelessWidget {
   final List<Reservation> reservations;
 
   const ReservationsTable({super.key, required this.reservations});
-
-  static String formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day.$month.${date.year}.';
-  }
-
-  static String formatTime(DateTime start, DateTime end) {
-    String hm(DateTime time) =>
-        '${time.hour.toString().padLeft(2, '0')}:'
-        '${time.minute.toString().padLeft(2, '0')}';
-
-    return '${hm(start)} - ${hm(end)}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +67,7 @@ class ReservationsTable extends StatelessWidget {
                         DataCell(Text(formatDate(reservation.startTime))),
                         DataCell(
                           Text(
-                            formatTime(
+                            formatTimeRange(
                               reservation.startTime,
                               reservation.endTime,
                             ),
