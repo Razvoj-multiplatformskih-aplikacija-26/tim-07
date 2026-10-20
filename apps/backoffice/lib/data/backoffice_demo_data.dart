@@ -1,13 +1,7 @@
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 
-/// Demo podaci za backoffice aplikaciju.
-///
-/// Tereni i radno vreme dolaze iz zajednickog [DemoData],
-/// a backoffice ima sopstveni, veci skup rezervacija
-/// kako bi tabela, detalji i akcije imali sta da prikazu.
 abstract final class BackofficeDemoData {
-  /// Korisnici koji su napravili rezervacije.
   static final users = <AppUser>[
     AppUser(
       id: const UserId(1),
@@ -57,10 +51,6 @@ abstract final class BackofficeDemoData {
 
   static List<BlockedPeriod> get blockedPeriods => DemoData.blockedPeriods;
 
-  /// Rezervacije u odnosu na trenutni datum.
-  ///
-  /// Sadrze sve statuse: na cekanju, potvrdjene,
-  /// zavrsene i otkazane.
   static List<Reservation> createReservations({DateTime? now}) {
     final current = now ?? DateTime.now();
     final today = DateTime(current.year, current.month, current.day);
@@ -164,7 +154,6 @@ abstract final class BackofficeDemoData {
     ];
   }
 
-  /// Ime korisnika za prikaz u tabeli i detaljima.
   static String userName(UserId id) {
     for (final user in users) {
       if (user.id == id) {
@@ -175,7 +164,6 @@ abstract final class BackofficeDemoData {
     return 'Korisnik #${id.value}';
   }
 
-  /// Naziv terena za prikaz u tabeli i detaljima.
   static String fieldName(FieldId id) {
     for (final field in fields) {
       if (field.id == id) {

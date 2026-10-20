@@ -3,10 +3,6 @@ import 'package:flutter/material.dart';
 import '../screens/placeholder_page.dart';
 import '../screens/reservations_page.dart';
 
-/// Osnovni desktop raspored backoffice aplikacije.
-///
-/// Levo je navigacija kroz sekcije, gore zaglavlje,
-/// a ostatak ekrana zauzima sadrzaj izabrane sekcije.
 class BackofficeShell extends StatefulWidget {
   const BackofficeShell({super.key});
 
