@@ -1,8 +1,8 @@
-import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../actions/reservation_actions.dart';
 import '../data/backoffice_demo_data.dart';
 import '../selection/reservation_selection_bloc.dart';
 import '../text/labels.dart';
@@ -10,8 +10,13 @@ import 'reservation_status_chip.dart';
 
 class ReservationDetailsPanel extends StatelessWidget {
   final List<Reservation> reservations;
+  final FocusNode? actionsFocusNode;
 
-  const ReservationDetailsPanel({super.key, required this.reservations});
+  const ReservationDetailsPanel({
+    super.key,
+    required this.reservations,
+    this.actionsFocusNode,
+  });
 
   Reservation? _find(ReservationId? id) {
     if (id == null) {
@@ -40,6 +45,7 @@ class ReservationDetailsPanel extends StatelessWidget {
           : _Details(
               key: ValueKey(reservation.id.value),
               reservation: reservation,
+              actionsFocusNode: actionsFocusNode,
             ),
     );
   }
@@ -78,22 +84,20 @@ class _EmptyDetails extends StatelessWidget {
 
 class _Details extends StatelessWidget {
   final Reservation reservation;
+  final FocusNode? actionsFocusNode;
 
-  const _Details({super.key, required this.reservation});
-
-  List<ReservationStatus> get _allowedTransitions => [
-        for (final to in ReservationStatus.values)
-          if (to != ReservationStatus.completed &&
-              canTransitionReservationStatus(reservation.status, to))
-            to,
-      ];
+  const _Details({
+    super.key,
+    required this.reservation,
+    this.actionsFocusNode,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final field = BackofficeDemoData.fieldById(reservation.fieldId);
     final user = BackofficeDemoData.userById(reservation.userId);
-    final transitions = _allowedTransitions;
+    final transitions = allowedTransitions(reservation);
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -161,8 +165,12 @@ class _Details extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final to in transitions)
-                _ActionButton(reservation: reservation, target: to),
+              for (final (index, to) in transitions.indexed)
+                _ActionButton(
+                  reservation: reservation,
+                  target: to,
+                  focusNode: index == 0 ? actionsFocusNode : null,
+                ),
             ],
           ),
       ],
@@ -173,82 +181,38 @@ class _Details extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   final Reservation reservation;
   final ReservationStatus target;
+  final FocusNode? focusNode;
 
-  const _ActionButton({required this.reservation, required this.target});
-
-  bool get _needsConfirmation => target == ReservationStatus.cancelled;
-
-  ReservationEvent? get _event {
-    return switch (target) {
-      ReservationStatus.confirmed =>
-        ReservationConfirmRequested(reservation.id),
-      ReservationStatus.cancelled => ReservationCancelRequested(reservation.id),
-      ReservationStatus.pending || ReservationStatus.completed => null,
-    };
-  }
-
-  Future<void> _onPressed(BuildContext context) async {
-    final event = _event;
-    if (event == null) {
-      return;
-    }
-
-    if (_needsConfirmation) {
-      final confirmed = await _confirm(context);
-      if (!confirmed || !context.mounted) {
-        return;
-      }
-    }
-
-    context.read<ReservationBloc>().add(event);
-  }
-
-  Future<bool> _confirm(BuildContext context) async {
-    final label = actionLabel(reservation.status, target);
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('$label rezervaciju #${reservation.id.value}?'),
-        content: const Text('Ova radnja se ne može poništiti.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Odustani'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(dialogContext).colorScheme.error,
-              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(label),
-          ),
-        ],
-      ),
-    );
-
-    return result ?? false;
-  }
+  const _ActionButton({
+    required this.reservation,
+    required this.target,
+    this.focusNode,
+  });
 
   @override
   Widget build(BuildContext context) {
     final label = Text(actionLabel(reservation.status, target));
+    void onPressed() => runReservationAction(context, reservation, target);
 
-    if (_needsConfirmation) {
+    if (needsConfirmation(target)) {
       final error = Theme.of(context).colorScheme.error;
 
       return OutlinedButton(
+        focusNode: focusNode,
         style: OutlinedButton.styleFrom(
           foregroundColor: error,
           side: BorderSide(color: error),
         ),
-        onPressed: () => _onPressed(context),
+        onPressed: onPressed,
         child: label,
       );
     }
 
-    return FilledButton(onPressed: () => _onPressed(context), child: label);
+    return FilledButton(
+      focusNode: focusNode,
+      onPressed: onPressed,
+      child: label,
+    );
   }
 }
 

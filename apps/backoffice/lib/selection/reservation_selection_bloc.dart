@@ -22,6 +22,16 @@ final class ReservationSelectionCleared extends ReservationSelectionEvent {
   const ReservationSelectionCleared();
 }
 
+final class ReservationSelectionMoved extends ReservationSelectionEvent {
+  final int offset;
+  final List<ReservationId> order;
+
+  const ReservationSelectionMoved({required this.offset, required this.order});
+
+  @override
+  List<Object?> get props => [offset, order];
+}
+
 final class ReservationSelectionState extends Equatable {
   final ReservationId? selectedId;
 
@@ -41,5 +51,35 @@ final class ReservationSelectionBloc
     on<ReservationSelectionCleared>(
       (event, emit) => emit(const ReservationSelectionState()),
     );
+    on<ReservationSelectionMoved>(_onMoved);
+  }
+
+  void _onMoved(
+    ReservationSelectionMoved event,
+    Emitter<ReservationSelectionState> emit,
+  ) {
+    final order = event.order;
+    if (order.isEmpty || event.offset == 0) {
+      return;
+    }
+
+    final selected = state.selectedId;
+    final index = selected == null ? -1 : order.indexOf(selected);
+    final last = order.length - 1;
+
+    var start = index;
+    if (index == -1) {
+      start = event.offset > 0 ? -1 : order.length;
+    }
+
+    var next = start + event.offset;
+    if (next < 0) {
+      next = 0;
+    }
+    if (next > last) {
+      next = last;
+    }
+
+    emit(ReservationSelectionState(selectedId: order[next]));
   }
 }
