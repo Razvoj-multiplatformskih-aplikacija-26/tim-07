@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../screens/placeholder_page.dart';
 import '../screens/reservations_page.dart';
+import '../widgets/simulation_menu.dart';
 
 class BackofficeShell extends StatefulWidget {
   const BackofficeShell({super.key});
@@ -79,7 +80,10 @@ class _BackofficeShellState extends State<BackofficeShell> {
           Expanded(
             child: Column(
               children: [
-                _Header(title: _sections[_selectedIndex].label),
+                _Header(
+                  title: _sections[_selectedIndex].label,
+                  showSimulation: _selectedIndex == 0,
+                ),
                 const Divider(height: 1),
                 Expanded(child: _buildPage(_selectedIndex)),
               ],
@@ -105,8 +109,9 @@ class _Section {
 
 class _Header extends StatelessWidget {
   final String title;
+  final bool showSimulation;
 
-  const _Header({required this.title});
+  const _Header({required this.title, required this.showSimulation});
 
   @override
   Widget build(BuildContext context) {
@@ -116,17 +121,34 @@ class _Header extends StatelessWidget {
       height: 64,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Row(
-          children: [
-            Text(title, style: theme.textTheme.titleLarge),
-            const Spacer(),
-            Text(
-              'Terenzo backoffice',
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final showAppName = constraints.maxWidth >= 600;
+
+            return Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleLarge,
+                  ),
+                ),
+                if (showAppName)
+                  Text(
+                    'Terenzo backoffice',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                if (showSimulation) ...[
+                  const SizedBox(width: 8),
+                  const SimulationMenu(),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );

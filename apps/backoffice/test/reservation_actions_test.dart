@@ -1,19 +1,19 @@
 import 'package:backoffice/app.dart';
+import 'package:backoffice/data/backoffice_fake_repository.dart';
 import 'package:backoffice/data/backoffice_repository.dart';
-import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  late FakeReservationRepository repository;
+  late BackofficeFakeReservationRepository repository;
 
   Future<void> pumpApp(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1600, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    repository = createBackofficeRepository();
+    repository = createBackofficeRepository(delay: Duration.zero);
 
     await tester.pumpWidget(BackofficeApp(repository: repository));
     await tester.pumpAndSettle();
