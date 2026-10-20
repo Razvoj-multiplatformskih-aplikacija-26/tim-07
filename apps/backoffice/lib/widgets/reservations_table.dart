@@ -12,14 +12,16 @@ class ReservationsTable extends StatelessWidget {
 
   const ReservationsTable({super.key, required this.reservations});
 
+  static List<Reservation> ordered(List<Reservation> reservations) =>
+      [...reservations]..sort((a, b) => a.startTime.compareTo(b.startTime));
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final selectedId =
         context.watch<ReservationSelectionBloc>().state.selectedId;
 
-    final sorted = [...reservations]
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    final sorted = ordered(reservations);
 
     return LayoutBuilder(
       builder: (context, constraints) {
