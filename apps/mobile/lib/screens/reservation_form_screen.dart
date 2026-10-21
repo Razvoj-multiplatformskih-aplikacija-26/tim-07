@@ -1,8 +1,11 @@
 
-import 'package:flutter/material.dart';
+import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/mock_reservations.dart';
+import '../data/mobile_demo_data.dart';
+import '../text/reservation_texts.dart';
 
 class ReservationFormScreen extends StatefulWidget {
   final String fieldName;
@@ -26,11 +29,11 @@ class ReservationFormScreen extends StatefulWidget {
 class _ReservationFormScreenState extends State<ReservationFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  static const String _currentUserName = 'Marko Marković';
-
   final _nameController = TextEditingController(
-    text: _currentUserName,
+    text: MobileDemoData.currentUserName,
   );
+
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -57,16 +60,20 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
   }
 
   void confirmReservation() {
-    if (!_formKey.currentState!.validate()) {
+    if (_submitting || !_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final fieldId = MobileDemoData.fieldIdByName(widget.fieldName);
+    if (fieldId == null) {
+      _showMessage('Teren nije pronađen.');
       return;
     }
 
     final times = widget.timeSlot.split('-');
-
     final startTime = _parseTime(times[0]);
     final endTime = _parseTime(times[1]);
 
-    // Koristimo domensko pravilo za validaciju termina.
     final validationError = validateReservationTime(
       startTime: startTime,
       endTime: endTime,
@@ -74,35 +81,38 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     );
 
     if (validationError != null) {
-      _showMessage(validationError.message);
+      _showMessage(validationMessage(validationError));
       return;
     }
 
-    // Privremena provera zauzetosti dok ne povezemo Bloc.
-    final alreadyReserved = MockReservations.reservations.any(
-          (reservation) =>
-      reservation.fieldName == widget.fieldName &&
-          DateUtils.isSameDay(reservation.date, widget.date) &&
-          reservation.timeSlot == widget.timeSlot &&
-          reservation.status != 'Otkazana',
-    );
+    setState(() => _submitting = true);
 
-    if (alreadyReserved) {
-      _showMessage('Ovaj termin je već rezervisan.');
+    context.read<ReservationBloc>().add(
+          ReservationCreateRequested(
+            fieldId: fieldId,
+            userId: MobileDemoData.currentUserId,
+            startTime: startTime,
+            endTime: endTime,
+          ),
+        );
+  }
+
+  void _onReservationState(BuildContext context, ReservationState state) {
+    if (!_submitting) {
       return;
     }
 
-    MockReservations.add(
-      fieldName: widget.fieldName,
-      date: widget.date,
-      timeSlot: widget.timeSlot,
-      customerName: _currentUserName,
-      price: widget.price,
-    );
-
-    _showMessage('Rezervacija je uspešno kreirana!');
-
-    Navigator.of(context).pop();
+    switch (state) {
+      case ReservationLoaded() || ReservationEmpty():
+        setState(() => _submitting = false);
+        _showMessage('Rezervacija je uspešno kreirana!');
+        Navigator.of(context).pop();
+      case ReservationError(:final message):
+        setState(() => _submitting = false);
+        _showMessage(errorDetails(message));
+      case ReservationInitial() || ReservationLoading():
+        break;
+    }
   }
 
   @override
@@ -112,7 +122,9 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
         '${widget.date.month.toString().padLeft(2, '0')}.'
         '${widget.date.year}.';
 
-    return Scaffold(
+    return BlocListener<ReservationBloc, ReservationState>(
+      listener: _onReservationState,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Nova rezervacija'),
       ),
@@ -184,13 +196,21 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
             const SizedBox(height: 24),
 
             FilledButton.icon(
-              onPressed: confirmReservation,
-              icon: const Icon(Icons.check_circle_outline),
-              label: const Text('Potvrdi rezervaciju'),
+              onPressed: _submitting ? null : confirmReservation,
+              icon: _submitting
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check_circle_outline),
+              label: Text(
+                _submitting ? 'Slanje rezervacije...' : 'Potvrdi rezervaciju',
+              ),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 }
