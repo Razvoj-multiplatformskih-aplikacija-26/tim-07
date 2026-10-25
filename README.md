@@ -25,14 +25,13 @@ Korisnik vidi samo svoje rezervacije, vlasnik upravlja isključivo svojim objekt
 
 Rezervacija sportskog terena prolazi kroz sledeća stanja:
 
-**Na čekanju → Potvrđena → U toku → Završena**
+**Na čekanju → Potvrđena → Završena**
 
-Uz dodatna stanja:
+Uz dodatno stanje:
 
-- **Odbijena** – vlasnik odbija zahtev za rezervaciju.
-- **Otkazana** – korisnik ili vlasnik otkazuje rezervaciju pre početka termina.
+- **Otkazana** – korisnik ili vlasnik otkazuje rezervaciju pre početka termina. Kada vlasnik odbije zahtev za rezervaciju, rezervacija takođe prelazi u ovo stanje.
 
-Rezervacija se kreira kada korisnik odabere teren i slobodan termin. Nakon potvrde vlasnika, rezervacija postaje aktivna. Po dolasku korisnika i početku korišćenja terena prelazi u stanje „U toku“, a nakon isteka termina u stanje „Završena“.
+Rezervacija se kreira kada korisnik odabere teren i slobodan termin. Nakon potvrde vlasnika, rezervacija postaje aktivna, a nakon isteka termina prelazi u stanje „Završena“.
 
 ### 3. Pravila
 
@@ -96,3 +95,68 @@ Za kreiranje rezervacije potrebna je prijava na sistem.
 | Javni veb          | svi posetioci                     | Jaspr             | pregledač      |
 | Server             | ostali delovi sistema             | Relic, MySql      | Linux, Windows |
 | Domenski paket     | svi delovi sistema                | Dart              | sve            |
+
+## Implementacija KT1
+
+Gore opisana tema je prijavljena tema celog sistema. U KT1 su urađeni zahtevi 1, 2, 3 i 5 za glavni pojam, rezervaciju terena. Zahtev 4 (rad bez mreže) ulazi u KT3, a zahtev 6 (javni sadržaj) u KT4.
+
+### Kako se pokreće
+
+```bash
+flutter pub get          # u korenu repozitorijuma (pub workspace)
+cd apps/mobile && flutter run          # Android emulator ili telefon
+cd apps/backoffice && flutter run -d windows   # desktop
+cd apps/backoffice && flutter run -d chrome    # veb
+```
+
+Testovi: `dart test` u `packages/domain` i `packages/blocs`, `flutter test` u `apps/mobile` i `apps/backoffice`.
+
+### Struktura
+
+| Folder | Sadržaj |
+| ------ | ------- |
+| `packages/domain` | Čist Dart paket: model, stanja, pravila i `ReservationRepository` (port). Koriste ga oba klijenta. |
+| `packages/blocs` | Čist Dart paket: `ReservationBloc` (događaji i stanja, `Equatable`). |
+| `apps/mobile` | Flutter aplikacija za korisnike (Android), `go_router`, tema, ikonica. |
+| `apps/backoffice` | Flutter aplikacija za osoblje (desktop i veb). |
+
+Svaki klijent ima svoju lažnu implementaciju repozitorijuma u memoriji (`MobileFakeRepository`, `BackofficeFakeRepository`) sa kašnjenjem. Podaci nisu sinhronizovani između klijenata.
+
+### Stanja u KT1
+
+Rezervacija ima četiri stanja (`ReservationStatus`): **na čekanju, potvrđena, završena i otkazana**. Dozvoljeni prelazi (`canTransitionReservationStatus`):
+
+- na čekanju → potvrđena ili otkazana,
+- potvrđena → završena ili otkazana,
+- završena i otkazana su konačna.
+
+Odbijanje zahteva od strane vlasnika vodi u stanje „otkazana“ (u backoffice-u je akcija „Odbij“ za rezervaciju na čekanju, a „Otkaži“ za potvrđenu).
+
+### Zahtevi KT1
+
+**1. Uloge.** Mobilna aplikacija radi kao jedan korisnik (pregled terena, rezervisanje, otkazivanje svojih rezervacija), a backoffice radi kao vlasnik objekta (pregled, potvrda, odbijanje i otkazivanje rezervacija svojih terena). Prijava stiže u KT2.
+
+**2. Stanja.** Rezervacija prolazi kroz stanja iz sekcije iznad. Korisnik kreira i otkazuje rezervaciju, a vlasnik potvrđuje, odbija i otkazuje. Dozvoljene prelaze određuje jedna funkcija u domenskom paketu.
+
+**3. Pravila.** Pravila su u `packages/domain/lib/src/rules` i vraćaju grešku kao `sealed` tip (`ReservationValidationError`), a poruke na srpskom bira aplikacija. Pravila: preklapanje termina istog terena, radno vreme terena, blokirani periodi, otkazivanje najkasnije 2 sata pre početka, provera prelaza stanja. Forma za rezervaciju u mobilnoj aplikaciji proverava unos ovim pravilima, a ista pravila koristi i backoffice.
+
+**5. Posao za osoblje.** Backoffice prikazuje rezervacije u tabeli, sa detaljima u bočnom panelu, i omogućava potvrđivanje, odbijanje i otkazivanje. Radi i tastaturom: ↑ ↓ (kretanje), Home / End, Enter (akcije), P (potvrdi), O (odbij / otkaži), R (osveži), Esc (nazad). Ispod širine od 900 px tabela prelazi u listu, a izabrana rezervacija se čuva.
+
+### Mobilna aplikacija
+
+- 15 lažnih rezervacija, sva četiri stanja zastupljena.
+- Ekrani: početna, katalog terena, detalj terena, forma za rezervaciju, moje rezervacije.
+- Otkazivanje traži potvrdu u dijalogu.
+- Ekran rezervacija prikazuje učitavanje, grešku sa dugmetom „Pokušaj ponovo“, prazan prikaz i podatke. Meni simulacije izaziva grešku ili prazan odgovor sledećeg zahteva.
+
+### Domenski paket
+
+- Model: `Reservation`, `SportsField`, `FieldSchedule`, `AppUser`, `Review` sa `final` poljima i posebnim tipovima identifikatora.
+- Pravila nad listama (preklapanje, blokirani periodi, radno vreme) računaju se u paketu; konačnu odluku o njima donosi server u KT2.
+- U paketu nema `package:flutter`, `dart:io`, `dart:ffi` ni `dart:js_interop`.
+
+### Upravljanje stanjem
+
+- `ReservationBloc` vodi učitavanje i promenu statusa rezervacije; stanja su `Equatable`.
+- Podaci stižu kroz `ReservationRepository` (`abstract interface class`), pa se implementacija menja bez izmene ekrana.
+- Ekrani samo šalju događaje i crtaju stanje.
