@@ -1,140 +1,177 @@
-
-import 'package:flutter/material.dart';
+import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/mock_reservations.dart';
+import '../data/mobile_demo_data.dart';
+import '../text/reservation_texts.dart';
+import '../widgets/simulation_menu.dart';
 
-class ReservationsScreen extends StatefulWidget {
+class ReservationsScreen extends StatelessWidget {
   const ReservationsScreen({super.key});
 
-  @override
-  State<ReservationsScreen> createState() =>
-      _ReservationsScreenState();
-}
-
-class _ReservationsScreenState extends State<ReservationsScreen> {
-  @override
-  void initState() {
-    super.initState();
-    MockReservations.changes.addListener(refreshReservations);
-  }
-
-  void refreshReservations() {
-    if (mounted) {
-      setState(() {});
-    }
+  static void reload(BuildContext context) {
+    context.read<ReservationBloc>().add(
+          const UserReservationsRequested(MobileDemoData.currentUserId),
+        );
   }
 
   @override
-  void dispose() {
-    MockReservations.changes.removeListener(refreshReservations);
-    super.dispose();
-  }
-
-  // Pretvara tekst termina, npr. "10:00 - 11:00",
-  // u pocetak i kraj rezervacije.
-  DateTime _parseTime(
-      DateTime date,
-      String time,
-      ) {
-    final parts = time.trim().split(':');
-
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
-
-    return DateTime(
-      date.year,
-      date.month,
-      date.day,
-      hour,
-      minute,
-    );
-  }
-
-  // Mapiranje statusa iz mock podataka u domenski enum.
-  ReservationStatus _domainStatus(String status) {
-    switch (status) {
-      case 'Na čekanju':
-        return ReservationStatus.pending;
-
-      case 'Potvrđena':
-        return ReservationStatus.confirmed;
-
-      case 'Završena':
-        return ReservationStatus.completed;
-
-      case 'Otkazana':
-        return ReservationStatus.cancelled;
-
-      default:
-        return ReservationStatus.cancelled;
-    }
-  }
-
-  // Pravimo domenski model kako bismo koristili
-  // zajednicko pravilo validateCancellation.
-  Reservation _toDomainReservation(
-      MockReservation mock,
-      ) {
-    final times = mock.timeSlot.split('-');
-
-    final startTime = _parseTime(
-      mock.date,
-      times[0],
-    );
-
-    final endTime = _parseTime(
-      mock.date,
-      times[1],
-    );
-
-    return Reservation(
-      id: ReservationId(mock.id),
-      fieldId: FieldId(1),
-      userId: mock.userId,
-      startTime: startTime,
-      endTime: endTime,
-      totalPrice: mock.price,
-      status: _domainStatus(mock.status),
-      createdAt: mock.date.subtract(
-        const Duration(days: 1),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Moje rezervacije'),
+        actions: const [SimulationMenu()],
+      ),
+      body: BlocBuilder<ReservationBloc, ReservationState>(
+        builder: (context, state) {
+          return switch (state) {
+            ReservationInitial() || ReservationLoading() =>
+              const _LoadingView(),
+            ReservationError(:final message) => _ErrorView(
+                message: errorDetails(message),
+                onRetry: () => reload(context),
+              ),
+            ReservationEmpty() => _EmptyView(onReload: () => reload(context)),
+            ReservationLoaded(:final reservations) =>
+              _ReservationsList(reservations: _mine(reservations)),
+          };
+        },
       ),
     );
   }
 
-  // Ne ponavljamo pravilo od 5 sati u UI-ju.
-  // Koristimo pravilo iz packages/domain.
-  ReservationValidationError? _cancellationError(
-      MockReservation mock,
-      ) {
-    final reservation = _toDomainReservation(mock);
+  static List<Reservation> _mine(List<Reservation> reservations) {
+    return [
+      for (final reservation in reservations)
+        if (reservation.userId == MobileDemoData.currentUserId) reservation,
+    ]..sort((a, b) => b.startTime.compareTo(a.startTime));
+  }
+}
 
-    return validateCancellation(
+class _LoadingView extends StatelessWidget {
+  const _LoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Učitavanje rezervacija...'),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorView({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 72, color: theme.colorScheme.error),
+            const SizedBox(height: 16),
+            Text(
+              'Rezervacije nisu učitane',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Pokušaj ponovo'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyView extends StatelessWidget {
+  final VoidCallback onReload;
+
+  const _EmptyView({required this.onReload});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.event_busy_outlined, size: 72, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text('Nemate rezervacija', style: TextStyle(fontSize: 20)),
+            const SizedBox(height: 8),
+            const Text('Izaberite teren i rezervišite termin.'),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: onReload,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Osveži'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReservationsList extends StatelessWidget {
+  final List<Reservation> reservations;
+
+  const _ReservationsList({required this.reservations});
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: () async => ReservationsScreen.reload(context),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: reservations.length,
+        itemBuilder: (context, index) =>
+            _ReservationCard(reservation: reservations[index]),
+      ),
+    );
+  }
+}
+
+class _ReservationCard extends StatelessWidget {
+  final Reservation reservation;
+
+  const _ReservationCard({required this.reservation});
+
+  Future<void> _cancel(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final bloc = context.read<ReservationBloc>();
+
+    final error = validateCancellation(
       reservation: reservation,
       now: DateTime.now(),
     );
-  }
-
-  void _showMessage(String message) {
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
-  }
-
-  Future<void> cancelReservation(
-      MockReservation mock,
-      ) async {
-    // Provera pre prikazivanja dijaloga.
-    final initialError = _cancellationError(mock);
-
-    if (initialError != null) {
-      _showMessage(initialError.message);
+    if (error != null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(validationMessage(error))),
+      );
       return;
     }
 
@@ -143,217 +180,123 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Otkaži rezervaciju'),
         content: const Text(
-          'Da li ste sigurni da želite da otkažete '
-              'ovu rezervaciju?',
+          'Da li ste sigurni da želite da otkažete ovu rezervaciju?',
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, false);
-            },
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Ne'),
           ),
           FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, true);
-            },
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Da, otkaži'),
           ),
         ],
       ),
     );
 
-    if (confirmed != true || !mounted) {
+    if (confirmed != true) {
       return;
     }
 
-    // Ponovna provera nakon dijaloga.
-    // Rok je mogao da istekne dok je dijalog otvoren.
-    final error = _cancellationError(mock);
-
-    if (error != null) {
-      _showMessage(error.message);
-      return;
-    }
-
-    MockReservations.cancel(mock.id);
-
-    if (mock.status == 'Otkazana') {
-      _showMessage('Rezervacija je otkazana.');
-    } else {
-      _showMessage('Rezervacija nije mogla biti otkazana.');
-    }
+    bloc.add(ReservationCancelRequested(reservation.id));
   }
 
   @override
   Widget build(BuildContext context) {
-    // Prikazujemo samo rezervacije demo korisnika.
-    final reservations = MockReservations.myReservations;
+    final theme = Theme.of(context);
+    final status = reservation.status;
+    final isActive = reservation.isActive;
+    final cancellationError = validateCancellation(
+      reservation: reservation,
+      now: DateTime.now(),
+    );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Moje rezervacije'),
-      ),
-      body: reservations.isEmpty
-          ? const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.event_busy_outlined,
-              size: 72,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Nemate rezervacija',
-              style: TextStyle(fontSize: 20),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Izaberite teren i rezervišite termin.',
-            ),
-          ],
-        ),
-      )
-          : ListView.builder(
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        itemCount: reservations.length,
-        itemBuilder: (context, index) {
-          final reservation = reservations[index];
-
-          final isCancelled =
-              reservation.status == 'Otkazana';
-
-          final isCompleted =
-              reservation.status == 'Završena';
-
-          final cancellationError =
-          _cancellationError(reservation);
-
-          final canCancel =
-              cancellationError == null;
-
-          final formattedDate =
-              '${reservation.date.day.toString().padLeft(2, '0')}.'
-              '${reservation.date.month.toString().padLeft(2, '0')}.'
-              '${reservation.date.year}.';
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    reservation.fieldName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today_outlined,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(formattedDate),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time),
-                      const SizedBox(width: 8),
-                      Text(reservation.timeSlot),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Row(
-                    children: [
-                      const Icon(Icons.person_outline),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          reservation.customerName,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Text(
-                    '${reservation.price} RSD',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary,
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Chip(
-                    avatar: Icon(
-                      isCancelled
-                          ? Icons.cancel_outlined
-                          : isCompleted
-                          ? Icons.check_circle_outline
-                          : Icons.schedule,
-                      size: 18,
-                    ),
-                    label: Text(reservation.status),
-                  ),
-
-                  if (!isCancelled &&
-                      !isCompleted) ...[
-                    const SizedBox(height: 12),
-
-                    OutlinedButton.icon(
-                      onPressed: canCancel
-                          ? () => cancelReservation(
-                        reservation,
-                      )
-                          : null,
-                      icon: const Icon(
-                        Icons.cancel_outlined,
-                      ),
-                      label: const Text(
-                        'Otkaži rezervaciju',
-                      ),
-                    ),
-
-                    if (!canCancel) ...[
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Otkazivanje je moguće '
-                            'najkasnije 5 sati pre '
-                            'početka termina.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ],
-                ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              MobileDemoData.fieldName(reservation.fieldId),
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            _InfoRow(
+              icon: Icons.calendar_today_outlined,
+              text: formatDate(reservation.startTime),
+            ),
+            const SizedBox(height: 8),
+            _InfoRow(
+              icon: Icons.access_time,
+              text: formatTimeRange(reservation.startTime, reservation.endTime),
+            ),
+            const SizedBox(height: 8),
+            const _InfoRow(
+              icon: Icons.person_outline,
+              text: MobileDemoData.currentUserName,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${reservation.totalPrice} RSD',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
               ),
             ),
-          );
-        },
+            const SizedBox(height: 12),
+            Chip(
+              avatar: Icon(
+                switch (status) {
+                  ReservationStatus.cancelled => Icons.cancel_outlined,
+                  ReservationStatus.completed => Icons.check_circle_outline,
+                  ReservationStatus.confirmed => Icons.event_available,
+                  ReservationStatus.pending => Icons.schedule,
+                },
+                size: 18,
+              ),
+              label: Text(statusLabel(status)),
+            ),
+            if (isActive) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed:
+                    cancellationError == null ? () => _cancel(context) : null,
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text('Otkaži rezervaciju'),
+              ),
+              if (cancellationError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  validationMessage(cancellationError),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ],
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _InfoRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text)),
+      ],
     );
   }
 }

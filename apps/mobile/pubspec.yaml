@@ -32,6 +32,7 @@ dependencies:
     path: ../../packages/domain
   blocs:
     path: ../../packages/blocs
+  flutter_bloc: ^9.1.1
   flutter:
     sdk: flutter
 

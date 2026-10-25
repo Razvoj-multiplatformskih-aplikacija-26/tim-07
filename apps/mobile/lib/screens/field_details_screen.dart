@@ -1,7 +1,11 @@
 
+import 'package:blocs/blocs.dart';
+import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../data/mock_reservations.dart';
+
+import '../data/mobile_demo_data.dart';
 
 class FieldDetailsScreen extends StatefulWidget {
   final String name;
@@ -40,24 +44,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
     '19:00 - 20:00',
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    MockReservations.changes.addListener(refreshSlots);
-  }
-
-  void refreshSlots() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  @override
-  void dispose() {
-    MockReservations.changes.removeListener(refreshSlots);
-    super.dispose();
-  }
-
   Future<void> selectDate() async {
     final today = DateUtils.dateOnly(DateTime.now());
 
@@ -77,20 +63,16 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
     }
   }
 
-  bool isSlotAvailable(int index) {
-    final timeSlot = times[index];
+  bool isSlotAvailable(int index, List<Reservation> reservations) {
+    final fieldId = MobileDemoData.fieldIdByName(widget.name);
+    final startHour = int.parse(times[index].substring(0, 2));
 
-    // Proverava aktivne rezervacije za ovaj teren,
-    // datum i vremenski termin.
-    final alreadyReserved = MockReservations.reservations.any(
-          (reservation) =>
-      reservation.fieldName == widget.name &&
-          DateUtils.isSameDay(
-            reservation.date,
-            selectedDate,
-          ) &&
-          reservation.timeSlot == timeSlot &&
-          reservation.status != 'Otkazana',
+    final alreadyReserved = reservations.any(
+      (reservation) =>
+          reservation.isActive &&
+          reservation.fieldId == fieldId &&
+          DateUtils.isSameDay(reservation.startTime, selectedDate) &&
+          reservation.startTime.hour == startHour,
     );
 
     if (alreadyReserved) {
@@ -127,10 +109,10 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
     }
   }
 
-  Widget buildTimeSlots() {
+  Widget buildTimeSlots(List<Reservation> reservations) {
     return Column(
       children: List.generate(times.length, (index) {
-        final available = isSlotAvailable(index);
+        final available = isSlotAvailable(index, reservations);
         final timeSlot = times[index];
 
         return Card(
@@ -164,6 +146,10 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final state = context.watch<ReservationBloc>().state;
+    final reservations = state is ReservationLoaded
+        ? state.reservations
+        : const <Reservation>[];
 
     final formattedDate =
         '${selectedDate.day.toString().padLeft(2, '0')}.'
@@ -172,7 +158,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
     final availableCount = List.generate(
       times.length,
-          (index) => isSlotAvailable(index),
+          (index) => isSlotAvailable(index, reservations),
     ).where((available) => available).length;
 
     return Scaffold(
@@ -285,7 +271,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           const SizedBox(height: 12),
 
-          buildTimeSlots(),
+          buildTimeSlots(reservations),
         ],
       ),
     );

@@ -11,6 +11,7 @@ import 'reservation_state.dart';
 final class ReservationBloc
     extends Bloc<ReservationEvent, ReservationState> {
   final ReservationRepository repository;
+  Future<List<Reservation>> Function()? _lastQuery;
 
   ReservationBloc({required this.repository})
       : super(const ReservationInitial()) {
@@ -27,6 +28,7 @@ final class ReservationBloc
       Emitter<ReservationState> emit,
       Future<List<Reservation>> Function() fetch,
       ) async {
+    _lastQuery = fetch;
     emit(const ReservationLoading());
 
     try {
@@ -129,7 +131,8 @@ final class ReservationBloc
     try {
       await action();
 
-      final reservations = await repository.getReservations();
+      final reload = _lastQuery ?? repository.getReservations;
+      final reservations = await reload();
 
       if (reservations.isEmpty) {
         emit(const ReservationEmpty());
