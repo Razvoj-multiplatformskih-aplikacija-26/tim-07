@@ -37,7 +37,7 @@ Rezervacija se kreira kada korisnik odabere teren i slobodan termin. Nakon potvr
 
 - Isti sportski teren ne može imati dve aktivne rezervacije čiji se termini vremenski preklapaju.
 - Korisnik ne može rezervisati termin koji je već zauzet ili koji se nalazi van radnog vremena sportskog objekta.
-- Korisnik može otkazati rezervaciju najkasnije 2 sata pre početka termina.
+- Korisnik može otkazati rezervaciju najkasnije 5 sati pre početka termina.
 - Vlasnik može privremeno blokirati određene termine zbog održavanja terena ili organizovanja događaja.
 - Korisnik može oceniti teren samo ukoliko ima završenu rezervaciju za taj teren.
 - Samo vlasnik određenog objekta može menjati njegove podatke, cene i raspoloživost.
@@ -132,21 +132,38 @@ Rezervacija ima četiri stanja (`ReservationStatus`): **na čekanju, potvrđena,
 
 Odbijanje zahteva od strane vlasnika vodi u stanje „otkazana“ (u backoffice-u je akcija „Odbij“ za rezervaciju na čekanju, a „Otkaži“ za potvrđenu).
 
+Vremenska pravila životnog ciklusa (`resolveReservationStatus`, računaju se nad vremenom koje funkcija dobija, bez `DateTime.now()`):
+
+- Rok je 5 sati pre početka termina. Do tada korisnik može da otkaže, a vlasnik da potvrdi.
+- Rezervacija na čekanju koju vlasnik nije potvrdio do roka postaje otkazana.
+- Korisnik potvrđuje dolazak (check-in) od 24 do 5 sati pre početka. Potvrđena rezervacija bez check-in-a do roka postaje otkazana, a sa check-in-om postaje završena kad termin istekne.
+
 ### Zahtevi KT1
 
 **1. Uloge.** Mobilna aplikacija radi kao jedan korisnik (pregled terena, rezervisanje, otkazivanje svojih rezervacija), a backoffice radi kao vlasnik objekta (pregled, potvrda, odbijanje i otkazivanje rezervacija svojih terena). Prijava stiže u KT2.
 
 **2. Stanja.** Rezervacija prolazi kroz stanja iz sekcije iznad. Korisnik kreira i otkazuje rezervaciju, a vlasnik potvrđuje, odbija i otkazuje. Dozvoljene prelaze određuje jedna funkcija u domenskom paketu.
 
-**3. Pravila.** Pravila su u `packages/domain/lib/src/rules` i vraćaju grešku kao `sealed` tip (`ReservationValidationError`), a poruke na srpskom bira aplikacija. Pravila: preklapanje termina istog terena, radno vreme terena, blokirani periodi, otkazivanje najkasnije 2 sata pre početka, provera prelaza stanja. Forma za rezervaciju u mobilnoj aplikaciji proverava unos ovim pravilima, a ista pravila koristi i backoffice.
+**3. Pravila.** Pravila su u `packages/domain/lib/src/rules` i vraćaju grešku kao `sealed` tip (`ReservationValidationError`), a poruke na srpskom bira aplikacija. Pravila: preklapanje termina (`hasReservationOverlap`), radno vreme terena, blokirani periodi, ispravnost i budućnost termina, otkazivanje najkasnije 5 sati pre početka (`validateCancellation`), provera prelaza stanja. Funkcija `validateReservationSlot` sabira pravila za slobodan termin i vraća prvu grešku kao tip. Polja forme za rezervaciju u mobilnoj aplikaciji (početak i kraj termina) proveravaju se tom funkcijom pri unosu, a ista pravila koristi i backoffice.
 
 **5. Posao za osoblje.** Backoffice prikazuje rezervacije u tabeli, sa detaljima u bočnom panelu, i omogućava potvrđivanje, odbijanje i otkazivanje. Radi i tastaturom: ↑ ↓ (kretanje), Home / End, Enter (akcije), P (potvrdi), O (odbij / otkaži), R (osveži), Esc (nazad). Ispod širine od 900 px tabela prelazi u listu, a izabrana rezervacija se čuva.
 
 ### Mobilna aplikacija
 
 - 15 lažnih rezervacija, sva četiri stanja zastupljena.
-- Ekrani: početna, katalog terena, detalj terena, forma za rezervaciju, moje rezervacije.
-- Otkazivanje traži potvrdu u dijalogu.
+- Ekrani i adrese (`go_router`, bez prosleđivanja objekata, pa rade i kad se adresa otvori direktno):
+
+  | Adresa | Ekran |
+  | ------ | ----- |
+  | `/` | početna |
+  | `/fields` | katalog terena |
+  | `/fields/:fieldId` | detalj terena |
+  | `/fields/:fieldId/reserve?date=&start=&end=` | forma za rezervaciju |
+  | `/reservations` | moje rezervacije |
+  | `/reservations/:reservationId` | detalj rezervacije |
+
+- Forma za rezervaciju ima polja „Početak“ i „Kraj“ (HH:mm). Pri unosu ih proverava `validateReservationSlot` iz paketa domain (budućnost, preklapanje sa korisnikovim rezervacijama, radno vreme), a cenu računa `calculateReservationPrice`. Poruke na srpskom bira aplikacija (`reservation_texts.dart`).
+- Otkazivanje (sa liste i sa detalja rezervacije) traži potvrdu u dijalogu.
 - Ekran rezervacija prikazuje učitavanje, grešku sa dugmetom „Pokušaj ponovo“, prazan prikaz i podatke. Meni simulacije izaziva grešku ili prazan odgovor sledećeg zahteva.
 
 ### Domenski paket

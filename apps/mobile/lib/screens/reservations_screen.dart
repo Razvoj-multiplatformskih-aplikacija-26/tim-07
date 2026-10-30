@@ -2,7 +2,9 @@ import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../actions/reservation_cancel.dart';
 import '../data/mobile_demo_data.dart';
 import '../text/reservation_texts.dart';
 import '../widgets/simulation_menu.dart';
@@ -12,8 +14,8 @@ class ReservationsScreen extends StatelessWidget {
 
   static void reload(BuildContext context) {
     context.read<ReservationBloc>().add(
-          const UserReservationsRequested(MobileDemoData.currentUserId),
-        );
+      const UserReservationsRequested(MobileDemoData.currentUserId),
+    );
   }
 
   @override
@@ -26,15 +28,16 @@ class ReservationsScreen extends StatelessWidget {
       body: BlocBuilder<ReservationBloc, ReservationState>(
         builder: (context, state) {
           return switch (state) {
-            ReservationInitial() || ReservationLoading() =>
-              const _LoadingView(),
+            ReservationInitial() ||
+            ReservationLoading() => const _LoadingView(),
             ReservationError(:final message) => _ErrorView(
-                message: errorDetails(message),
-                onRetry: () => reload(context),
-              ),
+              message: errorDetails(message),
+              onRetry: () => reload(context),
+            ),
             ReservationEmpty() => _EmptyView(onReload: () => reload(context)),
-            ReservationLoaded(:final reservations) =>
-              _ReservationsList(reservations: _mine(reservations)),
+            ReservationLoaded(:final reservations) => _ReservationsList(
+              reservations: _mine(reservations),
+            ),
           };
         },
       ),
@@ -85,10 +88,7 @@ class _ErrorView extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, size: 72, color: theme.colorScheme.error),
             const SizedBox(height: 16),
-            Text(
-              'Rezervacije nisu učitane',
-              style: theme.textTheme.titleLarge,
-            ),
+            Text('Rezervacije nisu učitane', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 24),
@@ -160,48 +160,6 @@ class _ReservationCard extends StatelessWidget {
 
   const _ReservationCard({required this.reservation});
 
-  Future<void> _cancel(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final bloc = context.read<ReservationBloc>();
-
-    final error = validateCancellation(
-      reservation: reservation,
-      now: DateTime.now(),
-    );
-    if (error != null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(validationMessage(error))),
-      );
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Otkaži rezervaciju'),
-        content: const Text(
-          'Da li ste sigurni da želite da otkažete ovu rezervaciju?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Ne'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Da, otkaži'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) {
-      return;
-    }
-
-    bloc.add(ReservationCancelRequested(reservation.id));
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -214,69 +172,77 @@ class _ReservationCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              MobileDemoData.fieldName(reservation.fieldId),
-              style: theme.textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            _InfoRow(
-              icon: Icons.calendar_today_outlined,
-              text: formatDate(reservation.startTime),
-            ),
-            const SizedBox(height: 8),
-            _InfoRow(
-              icon: Icons.access_time,
-              text: formatTimeRange(reservation.startTime, reservation.endTime),
-            ),
-            const SizedBox(height: 8),
-            const _InfoRow(
-              icon: Icons.person_outline,
-              text: MobileDemoData.currentUserName,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '${reservation.totalPrice} RSD',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/reservations/${reservation.id.value}'),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                MobileDemoData.fieldName(reservation.fieldId),
+                style: theme.textTheme.titleLarge,
               ),
-            ),
-            const SizedBox(height: 12),
-            Chip(
-              avatar: Icon(
-                switch (status) {
+              const SizedBox(height: 12),
+              _InfoRow(
+                icon: Icons.calendar_today_outlined,
+                text: formatDate(reservation.startTime),
+              ),
+              const SizedBox(height: 8),
+              _InfoRow(
+                icon: Icons.access_time,
+                text: formatTimeRange(
+                  reservation.startTime,
+                  reservation.endTime,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const _InfoRow(
+                icon: Icons.person_outline,
+                text: MobileDemoData.currentUserName,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${reservation.totalPrice} RSD',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Chip(
+                avatar: Icon(switch (status) {
                   ReservationStatus.cancelled => Icons.cancel_outlined,
                   ReservationStatus.completed => Icons.check_circle_outline,
                   ReservationStatus.confirmed => Icons.event_available,
                   ReservationStatus.pending => Icons.schedule,
-                },
-                size: 18,
+                }, size: 18),
+                label: Text(statusLabel(status)),
               ),
-              label: Text(statusLabel(status)),
-            ),
-            if (isActive) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed:
-                    cancellationError == null ? () => _cancel(context) : null,
-                icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Otkaži rezervaciju'),
-              ),
-              if (cancellationError != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  validationMessage(cancellationError),
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+              if (isActive) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: cancellationError == null
+                      ? () => cancelReservationWithConfirmation(
+                          context,
+                          reservation,
+                        )
+                      : null,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Otkaži rezervaciju'),
                 ),
+                if (cancellationError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    validationMessage(cancellationError),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -9,6 +9,19 @@ String statusLabel(ReservationStatus status) {
   };
 }
 
+String sportLabel(SportType sport) {
+  return switch (sport) {
+    SportType.football => 'Fudbal',
+    SportType.basketball => 'Košarka',
+    SportType.tennis => 'Tenis',
+    SportType.padel => 'Padel',
+    SportType.volleyball => 'Odbojka',
+    SportType.swimming => 'Plivanje',
+    SportType.futsal => 'Futsal',
+    SportType.other => 'Ostalo',
+  };
+}
+
 String validationMessage(ReservationValidationError error) {
   return switch (error) {
     InvalidTimeRange() => 'Kraj termina mora biti posle početka.',
@@ -20,6 +33,9 @@ String validationMessage(ReservationValidationError error) {
     InvalidReservationStatus() =>
       'Trenutni status rezervacije ne dozvoljava ovu radnju.',
     InvalidReservationDuration() => 'Trajanje rezervacije mora biti pozitivno.',
+    OutsideWorkingHours() => 'Termin je van radnog vremena terena.',
+    FieldBlocked() => 'Teren je blokiran u izabranom terminu.',
+    SlotAlreadyTaken() => 'Termin se preklapa sa postojećom rezervacijom.',
   };
 }
 
@@ -31,10 +47,12 @@ String formatDate(DateTime date) {
   return '$day.$month.${date.year}.';
 }
 
-String formatTimeRange(DateTime start, DateTime end) {
-  String clock(DateTime time) =>
-      '${time.hour.toString().padLeft(2, '0')}:'
-      '${time.minute.toString().padLeft(2, '0')}';
+String formatPrice(int amount) => '$amount RSD';
 
-  return '${clock(start)} - ${clock(end)}';
+String formatClock(DateTime time) =>
+    '${time.hour.toString().padLeft(2, '0')}:'
+    '${time.minute.toString().padLeft(2, '0')}';
+
+String formatTimeRange(DateTime start, DateTime end) {
+  return '${formatClock(start)} - ${formatClock(end)}';
 }

@@ -50,10 +50,10 @@ abstract final class MobileDemoData {
     );
   }
 
-  static FieldId? fieldIdByName(String name) {
+  static SportsField? fieldById(FieldId id) {
     for (final field in fields) {
-      if (field.name == name) {
-        return field.id;
+      if (field.id == id) {
+        return field;
       }
     }
     return null;

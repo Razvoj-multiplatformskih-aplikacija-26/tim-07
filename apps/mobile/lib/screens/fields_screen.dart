@@ -1,7 +1,9 @@
-
 import 'package:flutter/material.dart';
-import '../widgets/field_card.dart';
 import 'package:go_router/go_router.dart';
+
+import '../data/mobile_demo_data.dart';
+import '../text/reservation_texts.dart';
+import '../widgets/field_card.dart';
 
 class FieldsScreen extends StatefulWidget {
   const FieldsScreen({super.key});
@@ -40,70 +42,10 @@ class _FieldsScreenState extends State<FieldsScreen> {
     'Padel',
     'Plivanje',
     'Odbojka',
+    'Futsal',
   ];
 
-  final fields = [
-    (
-    name: 'Arena Fudbal',
-    location: 'Novi Beograd',
-    sport: 'Fudbal',
-    price: 3500,
-    ),
-    (
-    name: 'Basket Centar',
-    location: 'Voždovac',
-    sport: 'Košarka',
-    price: 2000,
-    ),
-    (
-    name: 'Tennis Club',
-    location: 'Zemun',
-    sport: 'Tenis',
-    price: 2500,
-    ),
-    (
-    name: 'Padel Arena',
-    location: 'Dorćol',
-    sport: 'Padel',
-    price: 3000,
-    ),
-    (
-    name: 'Sport Zone',
-    location: 'Banovo brdo',
-    sport: 'Fudbal',
-    price: 4000,
-    ),
-    (
-    name: 'Olimpijski Bazen',
-    location: 'Vračar',
-    sport: 'Plivanje',
-    price: 1800,
-    ),
-    (
-    name: 'Volley Arena',
-    location: 'Zvezdara',
-    sport: 'Odbojka',
-    price: 2800,
-    ),
-    (
-    name: 'Futsal Centar',
-    location: 'Zemun',
-    sport: 'Fudbal',
-    price: 3200,
-    ),
-    (
-    name: 'Tenis Akademija',
-    location: 'Novi Beograd',
-    sport: 'Tenis',
-    price: 2200,
-    ),
-    (
-    name: 'Basket 3x3',
-    location: 'Karaburma',
-    sport: 'Košarka',
-    price: 1500,
-    )
-  ];
+  final fields = MobileDemoData.fields;
 
   @override
   Widget build(BuildContext context) {
@@ -113,20 +55,18 @@ class _FieldsScreenState extends State<FieldsScreen> {
       );
 
       final matchesSport =
-          selectedSport == 'Svi' || field.sport == selectedSport;
+          selectedSport == 'Svi' || sportLabel(field.sport) == selectedSport;
 
       return matchesSearch && matchesSport;
     }).toList();
     if (selectedSort == 'Cena: od najniže') {
-      filteredFields.sort((a, b) => a.price.compareTo(b.price));
+      filteredFields.sort((a, b) => a.pricePerHour.compareTo(b.pricePerHour));
     } else if (selectedSort == 'Cena: od najviše') {
-      filteredFields.sort((a, b) => b.price.compareTo(a.price));
+      filteredFields.sort((a, b) => b.pricePerHour.compareTo(a.pricePerHour));
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sportski tereni'),
-      ),
+      appBar: AppBar(title: const Text('Sportski tereni')),
       body: Column(
         children: [
           Padding(
@@ -195,8 +135,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: sports.length,
-              separatorBuilder: (context, index) =>
-              const SizedBox(width: 8),
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final sport = sports[index];
 
@@ -216,18 +155,13 @@ class _FieldsScreenState extends State<FieldsScreen> {
           ),
 
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     'Pronađeno terena: ${filteredFields.length}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
                 if (searchQuery.isNotEmpty ||
@@ -244,35 +178,22 @@ class _FieldsScreenState extends State<FieldsScreen> {
           const SizedBox(height: 8),
           Expanded(
             child: filteredFields.isEmpty
-                ? const Center(
-              child: Text('Nema pronađenih terena.'),
-            )
+                ? const Center(child: Text('Nema pronađenih terena.'))
                 : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: filteredFields.length,
-              itemBuilder: (context, index) {
-                final field = filteredFields[index];
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filteredFields.length,
+                    itemBuilder: (context, index) {
+                      final field = filteredFields[index];
 
-
-                return FieldCard(
-                  name: field.name,
-                  location: field.location,
-                  sport: field.sport,
-                  pricePerHour: field.price,
-                  onTap: () {
-                    context.push(
-                      '/fields/details',
-                      extra: (
-                      name: field.name,
-                      location: field.location,
-                      sport: field.sport,
-                      price: field.price,
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                      return FieldCard(
+                        name: field.name,
+                        location: field.address,
+                        sport: sportLabel(field.sport),
+                        pricePerHour: field.pricePerHour,
+                        onTap: () => context.push('/fields/${field.id.value}'),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -1,4 +1,3 @@
-
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
@@ -6,24 +5,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/mobile_demo_data.dart';
+import '../text/reservation_texts.dart';
 
 class FieldDetailsScreen extends StatefulWidget {
-  final String name;
-  final String location;
-  final String sport;
-  final int pricePerHour;
+  final SportsField field;
 
-  const FieldDetailsScreen({
-    super.key,
-    required this.name,
-    required this.location,
-    required this.sport,
-    required this.pricePerHour,
-  });
+  const FieldDetailsScreen({super.key, required this.field});
 
   @override
-  State<FieldDetailsScreen> createState() =>
-      _FieldDetailsScreenState();
+  State<FieldDetailsScreen> createState() => _FieldDetailsScreenState();
 }
 
 class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
@@ -49,9 +39,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
     final picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate.isBefore(today)
-          ? today
-          : selectedDate,
+      initialDate: selectedDate.isBefore(today) ? today : selectedDate,
       firstDate: today,
       lastDate: today.add(const Duration(days: 30)),
     );
@@ -63,45 +51,69 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
     }
   }
 
+  ({DateTime start, DateTime end}) slotTimes(String timeSlot) {
+    final parts = timeSlot.split('-').map((part) => part.trim()).toList();
+
+    DateTime at(String time) {
+      final clock = time.split(':');
+      return DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        int.parse(clock[0]),
+        int.parse(clock[1]),
+      );
+    }
+
+    return (start: at(parts[0]), end: at(parts[1]));
+  }
+
   bool isSlotAvailable(int index, List<Reservation> reservations) {
-    final fieldId = MobileDemoData.fieldIdByName(widget.name);
-    final startHour = int.parse(times[index].substring(0, 2));
+    final slot = slotTimes(times[index]);
 
-    final alreadyReserved = reservations.any(
-      (reservation) =>
-          reservation.isActive &&
-          reservation.fieldId == fieldId &&
-          DateUtils.isSameDay(reservation.startTime, selectedDate) &&
-          reservation.startTime.hour == startHour,
-    );
+    final isFree =
+        validateReservationTime(
+              startTime: slot.start,
+              endTime: slot.end,
+              now: DateTime.now(),
+            ) ==
+            null &&
+        !hasReservationOverlap(
+          fieldId: widget.field.id,
+          userId: MobileDemoData.currentUserId,
+          startTime: slot.start,
+          endTime: slot.end,
+          existingReservations: reservations,
+        );
 
-    if (alreadyReserved) {
+    if (!isFree) {
       return false;
     }
 
-    // Pocetna simulacija zauzetih termina.
-    final fieldCode = widget.name.runes.fold<int>(
+    // Pocetna simulacija termina koje su zauzeli drugi korisnici.
+    final fieldCode = widget.field.name.runes.fold<int>(
       0,
-          (sum, character) => sum + character,
+      (sum, character) => sum + character,
     );
 
     final dateCode =
-        selectedDate.year * 10000 +
-            selectedDate.month * 100 +
-            selectedDate.day;
+        selectedDate.year * 10000 + selectedDate.month * 100 + selectedDate.day;
 
     return (fieldCode + dateCode + index * 7) % 5 != 0;
   }
 
   Future<void> openReservation(String timeSlot) async {
+    final slot = slotTimes(timeSlot);
+
     await context.push(
-      '/fields/reserve',
-      extra: (
-      fieldName: widget.name,
-      date: selectedDate,
-      timeSlot: timeSlot,
-      price: widget.pricePerHour,
-      ),
+      Uri(
+        path: '/fields/${widget.field.id.value}/reserve',
+        queryParameters: {
+          'date': DateUtils.dateOnly(selectedDate).toIso8601String(),
+          'start': formatClock(slot.start),
+          'end': formatClock(slot.end),
+        },
+      ).toString(),
     );
 
     if (mounted) {
@@ -117,23 +129,13 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
         return Card(
           child: ListTile(
-            onTap: available
-                ? () => openReservation(timeSlot)
-                : null,
+            onTap: available ? () => openReservation(timeSlot) : null,
             leading: Icon(
-              available
-                  ? Icons.check_circle
-                  : Icons.cancel,
-              color: available
-                  ? Colors.green
-                  : Colors.red,
+              available ? Icons.check_circle : Icons.cancel,
+              color: available ? Colors.green : Colors.red,
             ),
             title: Text(timeSlot),
-            subtitle: Text(
-              available
-                  ? 'Slobodan termin'
-                  : 'Zauzet termin',
-            ),
+            subtitle: Text(available ? 'Slobodan termin' : 'Zauzet termin'),
             trailing: available
                 ? const Icon(Icons.chevron_right)
                 : const Icon(Icons.lock_outline),
@@ -158,13 +160,11 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
     final availableCount = List.generate(
       times.length,
-          (index) => isSlotAvailable(index, reservations),
+      (index) => isSlotAvailable(index, reservations),
     ).where((available) => available).length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalji terena'),
-      ),
+      appBar: AppBar(title: const Text('Detalji terena')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -174,17 +174,13 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
               color: colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              Icons.stadium,
-              size: 80,
-              color: colorScheme.primary,
-            ),
+            child: Icon(Icons.stadium, size: 80, color: colorScheme.primary),
           ),
 
           const SizedBox(height: 24),
 
           Text(
-            widget.name,
+            widget.field.name,
             style: Theme.of(context).textTheme.headlineMedium,
           ),
 
@@ -194,9 +190,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
             children: [
               const Icon(Icons.location_on_outlined),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(widget.location),
-              ),
+              Expanded(child: Text(widget.field.address)),
             ],
           ),
 
@@ -206,7 +200,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
             children: [
               const Icon(Icons.sports),
               const SizedBox(width: 8),
-              Text(widget.sport),
+              Text(sportLabel(widget.field.sport)),
             ],
           ),
 
@@ -217,7 +211,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
               const Icon(Icons.payments_outlined),
               const SizedBox(width: 8),
               Text(
-                '${widget.pricePerHour} RSD / sat',
+                '${widget.field.pricePerHour} RSD / sat',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -231,18 +225,11 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
           const Divider(),
           const SizedBox(height: 16),
 
-          Text(
-            'O terenu',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('O terenu', style: Theme.of(context).textTheme.titleLarge),
 
           const SizedBox(height: 8),
 
-          const Text(
-            'Sportski teren dostupan za rekreativne aktivnosti '
-                'i organizovane termine. '
-                'Izaberite odgovarajući termin za svoju aktivnost.',
-          ),
+          Text(widget.field.description),
 
           const SizedBox(height: 24),
 

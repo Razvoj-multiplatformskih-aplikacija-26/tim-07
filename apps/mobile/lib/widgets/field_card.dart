@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class FieldCard extends StatelessWidget {
@@ -17,10 +16,10 @@ class FieldCard extends StatelessWidget {
     this.onTap,
   });
 
-
   IconData get sportIcon {
     switch (sport) {
       case 'Fudbal':
+      case 'Futsal':
         return Icons.sports_soccer;
       case 'Košarka':
         return Icons.sports_basketball;
@@ -36,7 +35,6 @@ class FieldCard extends StatelessWidget {
         return Icons.sports;
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -54,11 +52,7 @@ class FieldCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(
-                    sportIcon,
-                    size: 28,
-                    color: colorScheme.primary,
-                  ),
+                  Icon(sportIcon, size: 28, color: colorScheme.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -78,11 +72,7 @@ class FieldCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Chip(
-                avatar: Icon(
-                  sportIcon,
-                  size: 18,
-                  color: colorScheme.primary,
-                ),
+                avatar: Icon(sportIcon, size: 18, color: colorScheme.primary),
                 label: Text(sport),
                 backgroundColor: colorScheme.primaryContainer,
                 side: BorderSide.none,
