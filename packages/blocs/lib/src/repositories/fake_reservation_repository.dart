@@ -134,48 +134,26 @@ final class FakeReservationRepository implements ReservationRepository {
       throw StateError('Teren trenutno nije aktivan.');
     }
 
-    final timeError = validateReservationTime(
-      startTime: startTime,
-      endTime: endTime,
-      now: now,
-    );
-
-    if (timeError != null) {
-      throw StateError(timeError.message);
-    }
-
-    if (hasReservationOverlap(
+    final slotError = validateReservationSlot(
       fieldId: fieldId,
       userId: userId,
       startTime: startTime,
       endTime: endTime,
+      now: now,
       existingReservations: _reservations,
-    )) {
-      throw StateError('Termin se preklapa sa postojecom rezervacijom.');
-    }
-
-    if (hasBlockedPeriodOverlap(
-      fieldId: fieldId,
-      startTime: startTime,
-      endTime: endTime,
-      blockedPeriods: _blockedPeriods,
-    )) {
-      throw StateError('Teren je blokiran u izabranom terminu.');
-    }
-
-    if (!isReservationWithinWorkingHours(
-      fieldId: fieldId,
-      startTime: startTime,
-      endTime: endTime,
       schedules: _schedules,
-    )) {
-      throw StateError('Termin je van radnog vremena terena.');
+      blockedPeriods: _blockedPeriods,
+    );
+
+    if (slotError != null) {
+      throw StateError(slotError.message);
     }
 
-    // Cena se racuna proporcionalno trajanju.
-    final durationMinutes = endTime.difference(startTime).inMinutes;
-    final totalPrice =
-    (field.pricePerHour * durationMinutes / 60).round();
+    final totalPrice = calculateReservationPrice(
+      pricePerHour: field.pricePerHour,
+      startTime: startTime,
+      endTime: endTime,
+    );
 
     final status = field.confirmationMode == ConfirmationMode.automatic
         ? ReservationStatus.confirmed

@@ -1,4 +1,3 @@
-
 /// Tipizirane greške koje mogu nastati prilikom
 /// validacije rezervacije.
 ///
@@ -36,8 +35,7 @@ final class CheckInNotAllowed extends ReservationValidationError {
 }
 
 /// Rok za otkazivanje rezervacije je istekao.
-final class CancellationDeadlineExpired
-    extends ReservationValidationError {
+final class CancellationDeadlineExpired extends ReservationValidationError {
   const CancellationDeadlineExpired();
 
   @override
@@ -46,8 +44,7 @@ final class CancellationDeadlineExpired
 }
 
 /// Rezervacija nije u odgovarajućem statusu za operaciju.
-final class InvalidReservationStatus
-    extends ReservationValidationError {
+final class InvalidReservationStatus extends ReservationValidationError {
   const InvalidReservationStatus();
 
   @override
@@ -56,10 +53,33 @@ final class InvalidReservationStatus
 }
 
 /// Trajanje rezervacije mora biti pozitivno.
-final class InvalidReservationDuration
-    extends ReservationValidationError {
+final class InvalidReservationDuration extends ReservationValidationError {
   const InvalidReservationDuration();
 
   @override
   String get message => 'Trajanje rezervacije mora biti pozitivno.';
+}
+
+/// Termin nije u potpunosti unutar radnog vremena terena.
+final class OutsideWorkingHours extends ReservationValidationError {
+  const OutsideWorkingHours();
+
+  @override
+  String get message => 'Termin je van radnog vremena terena.';
+}
+
+/// Teren je blokiran (održavanje, događaj) u izabranom terminu.
+final class FieldBlocked extends ReservationValidationError {
+  const FieldBlocked();
+
+  @override
+  String get message => 'Teren je blokiran u izabranom terminu.';
+}
+
+/// Termin se preklapa sa postojećom aktivnom rezervacijom.
+final class SlotAlreadyTaken extends ReservationValidationError {
+  const SlotAlreadyTaken();
+
+  @override
+  String get message => 'Termin se preklapa sa postojećom rezervacijom.';
 }
