@@ -1,0 +1,48 @@
+CLEAN BUILD - provera da projekat radi iz cistog klona
+=======================================================
+
+Komande su za PowerShell (Windows). Pokreci ih redom, jednu po jednu.
+Svaka mora da prodje bez gresaka. U PowerShell-u se umesto && koristi ;
+
+1. Kloniraj main u novi, prazan folder
+   git clone https://github.com/Razvoj-multiplatformskih-aplikacija-26/tim-07.git $env:TEMP\tim07-clean
+
+2. Udji u klon
+   cd $env:TEMP\tim07-clean
+
+3. Preuzmi zavisnosti (jednom, u korenu - pub workspace)
+   flutter pub get
+
+4. Analiza celog projekta (ocekuje se "No issues found!")
+   flutter analyze
+
+5. Testovi domenskog paketa
+   cd packages/domain; dart test; cd ../..
+
+6. Testovi blocs paketa
+   cd packages/blocs; dart test; cd ../..
+
+7. Testovi mobilne aplikacije
+   cd apps/mobile; flutter test; cd ../..
+
+8. Testovi backoffice aplikacije
+   cd apps/backoffice; flutter test; cd ../..
+
+9. Pokretanje backoffice aplikacije u pregledacu
+   cd apps/backoffice; flutter run -d chrome
+
+   Ili kao desktop aplikacija:
+   cd apps/backoffice; flutter run -d windows
+
+10. Pokretanje mobilne aplikacije (Android emulator ili telefon mora biti ukljucen)
+    cd apps/mobile; flutter run
+
+11. Brisanje privremenog klona kada je provera gotova
+    cd ~; Remove-Item -Recurse -Force $env:TEMP\tim07-clean
+
+Napomene
+--------
+- Klon se pravi sa GitHuba, a ne iz lokalnog foldera, da se proveri samo ono sto je
+  zaista pushovano na main.
+- Tokom flutter run: r = hot reload, q = izlaz.
+- Ako neki uredjaj nije prepoznat, pokreni: flutter devices
