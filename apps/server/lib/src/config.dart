@@ -30,6 +30,9 @@ final class ServerConfig {
   /// Da li server pri podizanju upisuje početne podatke (samo razvoj).
   final bool seedDemoData;
 
+  /// Folder sa SQL migracijama (`migrations` u `apps/server` i u Docker slici).
+  final String migrationsDirectory;
+
   const ServerConfig({
     required this.host,
     required this.port,
@@ -42,6 +45,7 @@ final class ServerConfig {
     required this.tokenTtl,
     required this.corsAllowedOrigins,
     required this.seedDemoData,
+    this.migrationsDirectory = 'migrations',
   });
 
   /// Čita podešavanja iz [environment].
@@ -88,6 +92,9 @@ final class ServerConfig {
           .where((origin) => origin.isNotEmpty)
           .toList(growable: false),
       seedDemoData: environment['SEED_DEMO_DATA']?.trim() == 'true',
+      migrationsDirectory: environment['MIGRATIONS_DIR']?.trim().isNotEmpty == true
+          ? environment['MIGRATIONS_DIR']!.trim()
+          : 'migrations',
     );
 
     if (config.jwtSecret.isNotEmpty && config.jwtSecret.length < 32) {

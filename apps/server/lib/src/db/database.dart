@@ -125,21 +125,28 @@ final class Database implements SqlExecutor {
   ///
   /// Ako [action] baci izuzetak, sve izmene se poništavaju (`ROLLBACK`) i
   /// izuzetak ide dalje, pa ga HTTP sloj pretvara u kod greške.
-  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) async {
-    final connection = await _acquire();
-    var broken = false;
-    try {
+  Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) {
+    return withConnection((connection) async {
       await connection.query('START TRANSACTION');
       try {
-        final result = await action(_TransactionExecutor(connection));
+        final result = await action(connection);
         await connection.query('COMMIT');
         return result;
       } catch (_) {
         await connection.query('ROLLBACK');
         rethrow;
       }
-    } on MySqlException {
-      rethrow;
+    });
+  }
+
+  /// Izvršava [action] nad jednom konekcijom, bez transakcije.
+  ///
+  /// Treba kad nešto važi za konekciju, npr. `GET_LOCK` pri migracijama.
+  Future<T> withConnection<T>(Future<T> Function(SqlExecutor connection) action) async {
+    final connection = await _acquire();
+    var broken = false;
+    try {
+      return await action(_ConnectionExecutor(connection));
     } on SocketException {
       broken = true;
       rethrow;
@@ -176,10 +183,10 @@ final class Database implements SqlExecutor {
   }
 }
 
-final class _TransactionExecutor implements SqlExecutor {
+final class _ConnectionExecutor implements SqlExecutor {
   final MySqlConnection _connection;
 
-  _TransactionExecutor(this._connection);
+  _ConnectionExecutor(this._connection);
 
   @override
   Future<Result> query(String sql, [List<Object?>? values]) =>
