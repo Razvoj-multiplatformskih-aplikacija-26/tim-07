@@ -29,7 +29,9 @@ Uz preklapanje važe i ostala pravila iz KT1: radno vreme, budućnost i ispravno
 
 ## 2. Ko konačno čuva pravilo: server uz zaštitu u bazi
 
-**Odluka.** Konačnu odluku donosi **server**, pre svakog upisa, pozivom istih funkcija iz `domain` (`validateReservationSlot`, `validateCancellation`, `canTransitionReservationStatus`, `resolveReservationStatus`). Provera i upis su u **jednoj transakciji** u kojoj se red terena zaključava sa `SELECT … FROM sports_fields WHERE id = ? FOR UPDATE`. Drugi zahtev za isti teren čeka da se prva transakcija završi, pa tek onda čita rezervacije i vidi novi upis.
+**Odluka.** Konačnu odluku donosi **server**, pre svakog upisa, pozivom istih funkcija iz `domain` (`validateReservationSlot`, `validateCancellation`, `canTransitionReservationStatus`, `resolveReservationStatus`). Provera i upis su u **jednoj transakciji** koja **prvo** zaključa red terena i red korisnika (`SELECT id … FOR UPDATE`), a tek onda čita rezervacije, radno vreme i blokade. Drugi zahtev za isti teren (ili istog korisnika, jer korisnik ne sme da ima dve rezervacije u isto vreme ni na različitim terenima) čeka da se prva transakcija završi, pa tek onda čita rezervacije i vidi novi upis. Zaključavanje uvek ide istim redom (teren, pa korisnik), pa dve transakcije ne mogu da čekaju jedna drugu u krug (deadlock).
+
+Transakcije rade u nivou izolacije `READ COMMITTED`: svaka naredba vidi poslednje potvrđene podatke. U podrazumevanom `REPEATABLE READ` transakcija čita sliku baze napravljenu pri prvom običnom čitanju, pa bi čitanje pre zaključavanja dalo staru sliku bez tuđe rezervacije.
 
 Baza dodatno čuva ono što ume da izrazi: strani ključevi, `CHECK (start_time < end_time)`, `CHECK` nad dozvoljenim tekstom stanja, `CHECK (price >= 0)`.
 
@@ -41,6 +43,14 @@ Klijent proverava ista pravila nad podacima koje ima, samo da bi korisnik odmah 
 - *Samo provera u klijentu.* Dva klijenta ne vide tuđe zahteve u istom trenutku, a poziv mimo aplikacije (curl) bi prošao.
 - *Okidač (trigger) u bazi koji odbija preklapanje.* Pravilo bi postojalo dvaput (SQL i Dart), greška iz okidača se teško prevodi u kod za klijenta, i teže je testirati.
 - *Nivo izolacije `SERIALIZABLE` za celu bazu.* Radi, ali zaključava šire nego što treba i vraća deadlock greške koje bi server morao da ponavlja.
+- *Zaključati samo teren.* Tako je bilo u prvoj verziji, i test sa paralelnim pozivima je pokazao da isti korisnik istovremeno dobija dve rezervacije u isto vreme na dva terena.
+
+**Kako je provereno** (`apps/server/test/concurrency_test.dart`, nad pravim MySQL-om):
+- 12 korisnika istovremeno traži isti termin istog terena: upisuje se tačno jedna rezervacija, ostalih 11 dobija `SlotAlreadyTaken` (na mreži `409 slot_taken`), nijedan ne dobija neočekivanu grešku.
+- 12 istovremenih termina koji se samo delimično preklapaju: prolazi jedan.
+- Isti termin na dva različita terena: prolaze oba (zaključavanje ne usporava nepovezane upise).
+- Isti korisnik istovremeno na dva terena u isto vreme: prolazi jedan.
+- Otkazivanje i potvrda iste rezervacije istovremeno: stanje u bazi odgovara ishodu koji su klijenti dobili.
 
 ## 3. Šta vidi zakasneli klijent
 
