@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:relic/relic.dart';
 
-/// Odgovor sa JSON telom i zadatim HTTP statusom.
 Response jsonResponse(int statusCode, Object? data) {
   return Response(
     statusCode,
@@ -10,10 +9,6 @@ Response jsonResponse(int statusCode, Object? data) {
   );
 }
 
-/// Greška u obliku iz `docs/kt2-decisions.md` (odluka 13):
-/// `{"error": {"code": "...", "details": {...}}}`.
-///
-/// Server nikad ne šalje poruku za korisnika, samo kod i podatke.
 Response errorResponse(
   int statusCode,
   String code, {
@@ -24,9 +19,6 @@ Response errorResponse(
   });
 }
 
-/// Zahtev ne može da se obradi zbog neispravnog ulaza.
-///
-/// Rute bacaju ovu grešku, a [handleErrors] je pretvara u odgovor.
 final class HttpError implements Exception {
   final int statusCode;
   final String code;
@@ -49,9 +41,6 @@ final class HttpError implements Exception {
   String toString() => 'HttpError($statusCode, $code, $details)';
 }
 
-/// Čita telo zahteva kao JSON objekat.
-///
-/// Prazno telo, neispravan JSON ili nešto što nije objekat daju `400`.
 Future<Map<String, Object?>> readJsonObject(Request request) async {
   final String text;
   try {

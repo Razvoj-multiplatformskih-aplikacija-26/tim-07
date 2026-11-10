@@ -3,7 +3,6 @@ import 'package:domain/domain.dart';
 import 'database.dart';
 import 'rows.dart';
 
-/// Tereni nad MySQL-om (port [SportsFieldRepository] iz domena).
 final class MySqlSportsFieldRepository implements SportsFieldRepository {
   final SqlExecutor _db;
 
@@ -89,7 +88,6 @@ final class MySqlSportsFieldRepository implements SportsFieldRepository {
   }
 }
 
-/// Radno vreme i blokirani periodi nad MySQL-om.
 final class MySqlFieldScheduleRepository implements FieldScheduleRepository {
   final SqlExecutor _db;
 
@@ -159,7 +157,6 @@ final class MySqlFieldScheduleRepository implements FieldScheduleRepository {
   }
 }
 
-/// Korisnici nad MySQL-om (bez heša lozinke, on nije deo domena).
 final class MySqlUserRepository implements UserRepository {
   final SqlExecutor _db;
 
@@ -173,7 +170,6 @@ final class MySqlUserRepository implements UserRepository {
 
   @override
   Future<AppUser?> getUserByEmail(String email) async {
-    // Kolacija baze (*_ci) već poredi bez razlike velikih i malih slova.
     final rows = await _db.query(
       'SELECT ${Rows.userColumns} FROM users u WHERE u.email = ?',
       [email.trim()],

@@ -1,10 +1,5 @@
 import 'package:server/server.dart';
 
-/// Osnovni podaci za testove repozitorijuma.
-///
-/// Korisnici: 1 Ana (user), 2 Marko (user), 3 Vlada (owner), 4 Admin.
-/// Tereni (vlasnik 3): 1 Arena (ručna potvrda), 2 Tenis (automatska),
-/// 3 neodobren teren. Svi rade svaki dan 08:00–23:00 po lokalnom vremenu.
 Future<void> insertFixtures(SqlExecutor db) async {
   await db.query('''
     INSERT INTO users (id, first_name, last_name, email, phone_number, date_of_birth, role, password_hash)

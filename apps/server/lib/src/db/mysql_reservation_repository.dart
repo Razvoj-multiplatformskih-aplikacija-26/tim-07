@@ -3,15 +3,6 @@ import 'package:domain/domain.dart';
 import 'database.dart';
 import 'rows.dart';
 
-/// Rezervacije nad MySQL-om (port [ReservationRepository] iz domena).
-///
-/// Isti port implementira i lažni repozitorijum iz KT1, pa Bloc-ovi i ekrani
-/// ne znaju odakle podaci dolaze. Pravila se ovde ne pišu ponovo: sve odluke
-/// donose funkcije iz `domain`, a repozitorijum im samo dostavlja podatke iz
-/// baze i upisuje rezultat.
-///
-/// Greške pravila se bacaju kao [ReservationRuleViolation] sa tipiziranom
-/// greškom, a nepostojeći zapis kao [EntityNotFound].
 final class MySqlReservationRepository implements ReservationRepository {
   final Database _database;
   final DateTime Function() _clock;
@@ -20,8 +11,6 @@ final class MySqlReservationRepository implements ReservationRepository {
       : _clock = clock ?? DateTime.now;
 
   DateTime _now() => _clock().toUtc();
-
-  // --- Čitanje ---
 
   Future<List<Reservation>> _select(
     SqlExecutor db,
@@ -55,7 +44,6 @@ final class MySqlReservationRepository implements ReservationRepository {
     return _select(_database, 'WHERE r.field_id = ?', [fieldId.value]);
   }
 
-  /// Rezervacije na svim terenima jednog vlasnika (backoffice).
   Future<List<Reservation>> getReservationsByOwner(UserId ownerId) async {
     await _refreshStatuses(_database);
     return _select(
@@ -72,8 +60,6 @@ final class MySqlReservationRepository implements ReservationRepository {
     return found.isEmpty ? null : found.single;
   }
 
-  // --- Upis ---
-
   @override
   Future<Reservation> createReservation({
     required FieldId fieldId,
@@ -84,9 +70,6 @@ final class MySqlReservationRepository implements ReservationRepository {
     return _database.transaction((tx) async {
       final now = _now();
 
-      // Zaključavanje: drugi upis za isti teren (ili istog korisnika) čeka
-      // da se ova transakcija završi, pa tek onda čita rezervacije i vidi
-      // ovu. Tako o preklapanju konačno odlučuje server (odluka 2, T39).
       final fieldRows = await tx.query(
         'SELECT ${Rows.fieldColumns}, f.approval_status FROM sports_fields f '
         'WHERE f.id = ? FOR UPDATE',
@@ -105,7 +88,6 @@ final class MySqlReservationRepository implements ReservationRepository {
 
       await _refreshStatuses(tx);
 
-      // SQL samo sužava skup kandidata; odluku donosi domen.
       final candidates = await _select(
         tx,
         "WHERE (r.field_id = ? OR r.user_id = ?) AND r.status IN ('pending', 'confirmed') "
@@ -115,7 +97,6 @@ final class MySqlReservationRepository implements ReservationRepository {
       final schedules = await _schedules(tx, fieldId);
       final blocked = await _blockedPeriods(tx, fieldId, startTime, endTime);
 
-      // Radno vreme je lokalno (odluka 5), pa domen dobija lokalno vreme.
       final error = validateReservationSlot(
         fieldId: fieldId,
         userId: userId,
@@ -167,7 +148,6 @@ final class MySqlReservationRepository implements ReservationRepository {
         throw const ReservationRuleViolation(InvalidReservationStatus());
       }
 
-      // Završetak je samo automatski (resolveReservationStatus).
       if (status == ReservationStatus.completed) {
         throw const ReservationRuleViolation(InvalidReservationStatus());
       }
@@ -206,9 +186,6 @@ final class MySqlReservationRepository implements ReservationRepository {
   Future<Reservation> cancelReservation(ReservationId reservationId) =>
       updateReservationStatus(reservationId: reservationId, status: ReservationStatus.cancelled);
 
-  // --- Pomoćno ---
-
-  /// Zaključava rezervaciju i upisuje stanje koje joj po vremenu pripada.
   Future<Reservation> _lockAndRefresh(SqlExecutor tx, ReservationId id, DateTime now) async {
     final found = await _select(tx, 'WHERE r.id = ?', [id.value], 'FOR UPDATE');
     if (found.isEmpty) throw EntityNotFound('reservation', id.value);
@@ -221,13 +198,6 @@ final class MySqlReservationRepository implements ReservationRepository {
     return reservation.copyWith(status: resolved);
   }
 
-  /// Automatski životni ciklus (KT1): rezervacija na čekanju bez potvrde i
-  /// potvrđena bez dolaska postaju otkazane na 5 sati pre početka, a
-  /// potvrđena sa dolaskom postaje završena kada termin istekne.
-  ///
-  /// Odluku donosi `resolveReservationStatus` iz domena. SQL bira samo
-  /// aktivne rezervacije kojima je rok već prošao, jer druge ne mogu da se
-  /// promene.
   Future<void> _refreshStatuses(SqlExecutor db) async {
     final now = _now();
     final due = await _select(
@@ -239,7 +209,6 @@ final class MySqlReservationRepository implements ReservationRepository {
     for (final reservation in due) {
       final resolved = resolveReservationStatus(reservation, now);
       if (resolved != reservation.status) {
-        // Uslov na staro stanje: ako ga je neko u međuvremenu promenio, ne gazimo.
         await db.query(
           'UPDATE reservations SET status = ? WHERE id = ? AND status = ?',
           [resolved.name, reservation.id.value, reservation.status.name],

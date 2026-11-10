@@ -11,7 +11,6 @@ import 'support/test_database.dart';
 void main() {
   TestDatabase? testDb;
 
-  // "Sada" je ponedeljak 3. 6. 2030. u 10:00 po lokalnom vremenu.
   var now = DateTime(2030, 6, 3, 10);
   DateTime at(int day, int hour, [int minute = 0]) => DateTime(2030, 6, day, hour, minute);
 
@@ -78,7 +77,6 @@ void main() {
         ),
         violates<SlotAlreadyTaken>(),
       );
-      // Termin koji počinje tačno kad prethodni završi nije preklapanje.
       await reservations.createReservation(
         fieldId: FieldId(1), userId: UserId(2), startTime: at(4, 20), endTime: at(4, 21),
       );
@@ -191,10 +189,8 @@ void main() {
         fieldId: FieldId(2), userId: UserId(1), startTime: at(3, 18), endTime: at(3, 19),
       );
 
-      // Sa check-in-om potvrđena rezervacija ostaje potvrđena i posle roka
-      // (bez njega bi je domen već otkazao, pa bi greška bila stanje).
-      await reservations.checkIn(created.id); // 8 sati pre početka
-      now = at(3, 14); // 4 sata pre početka
+      await reservations.checkIn(created.id);
+      now = at(3, 14);
       expect(reservations.cancelReservation(created.id), violates<CancellationDeadlineExpired>());
     });
 
@@ -215,11 +211,11 @@ void main() {
         fieldId: FieldId(2), userId: UserId(1), startTime: at(4, 18), endTime: at(4, 19),
       );
 
-      now = at(4, 9); // 9 sati pre početka: prozor je otvoren
+      now = at(4, 9);
       final checkedIn = await reservations.checkIn(created.id);
       expect(checkedIn.isCheckedIn, isTrue);
 
-      now = at(4, 20); // termin je istekao
+      now = at(4, 20);
       final after = await reservations.getReservationById(created.id);
       expect(after!.status, ReservationStatus.completed);
     });
@@ -230,7 +226,7 @@ void main() {
         fieldId: FieldId(1), userId: UserId(1), startTime: at(4, 18), endTime: at(4, 19),
       );
 
-      now = at(4, 13, 30); // rok je bio u 13:00
+      now = at(4, 13, 30);
       final after = await reservations.getReservationById(created.id);
       expect(after!.status, ReservationStatus.cancelled);
     });
@@ -266,7 +262,6 @@ void main() {
         confirmationMode: ConfirmationMode.automatic,
       );
       expect(created.imageUrls, ['a.jpg', 'b.jpg']);
-      // Novi teren čeka odobrenje administratora.
       expect((await fields.getPublicFields()).map((f) => f.name), isNot(contains('Basket')));
 
       final updated = await fields.updateField(
@@ -275,7 +270,7 @@ void main() {
       expect(updated.pricePerHour, 1800);
       expect(updated.imageUrls, ['c.jpg']);
       expect(updated.isActive, isFalse);
-      expect(updated.description, 'Otvoreni teren'); // TEXT kolona
+      expect(updated.description, 'Otvoreni teren');
     });
   });
 
