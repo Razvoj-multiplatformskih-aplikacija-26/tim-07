@@ -225,3 +225,18 @@ Server nikad ne šalje gotovu poruku za korisnika, već **kod i podatke**:
 | 500 | `internal` | neočekivana greška (detalji samo u logu servera) |
 
 Poruku na srpskom pravi klijent iz koda, istom funkcijom kao kada pravilo proveri lokalno. Nepoznat kod daje opštu poruku („Došlo je do greške. Pokušajte ponovo.“). Konkretan oblik DTO-a definiše `packages/contract` (T40), a prevod `packages/mapping` (T41).
+
+## 14. Statistika zauzetosti
+
+**Odluka.** Zauzetost računa **server**, jednom funkcijom iz domena (`calculateOccupancyReport`), za izabrani period: nedelja (od ponedeljka u ponoć) ili mesec, po lokalnom vremenu objekta.
+
+- **Raspoloživo vreme** terena je zbir radnog vremena po danima u periodu, bez blokiranih perioda.
+- **Zauzeto vreme** su rezervacije koje nisu otkazane (na čekanju, potvrđene, završene), i to samo deo koji pada u raspoloživo vreme. Zato zauzetost nikad ne prelazi 100 %, a rezervacija preko granice perioda računa se samo unutar perioda.
+- **Realizovane** su završene rezervacije koje počinju u periodu, a **otkazane** su otkazane i odbijene zajedno (u bazi su obe u stanju `cancelled`).
+- Stanja se pre računanja osvežavaju sa `resolveReservationStatus`, pa se potvrđena rezervacija sa dolaskom čiji je termin prošao računa kao završena i kada baza to još nije upisala.
+- Vlasnik dobija statistiku samo za svoje terene, a administrator za sve.
+- Na mreži idu minuti (celi brojevi), a procenat zaokružuje klijent iz njih, isto kao `occupancyPercent` u domenu.
+
+**Odbačeno.**
+- *Računanje u klijentu.* Klijent bi morao da preuzme sve rezervacije svih terena za ceo period, uključujući tuđe podatke, samo da bi prikazao nekoliko brojeva.
+- *Ceo proračun u jednom SQL upitu.* Radno vreme po danima, blokade i rezervacije preko granice perioda teško se izražavaju u SQL-u, a pravilo bi postojalo i u SQL-u i u domenu. Ovako je ista funkcija proverena unit testovima bez baze.
