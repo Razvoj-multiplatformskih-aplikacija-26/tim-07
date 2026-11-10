@@ -1,0 +1,7 @@
+.git
+**/.dart_tool
+**/build
+.idea
+apps/mobile
+apps/backoffice
+.env
