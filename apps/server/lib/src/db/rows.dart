@@ -9,6 +9,7 @@ abstract final class Rows {
   static const fieldColumns =
       'f.id, f.owner_id, f.name, f.description, f.sport, f.address, f.city, '
       'f.price_per_hour, f.contact_phone, f.confirmation_mode, f.is_active, '
+      'f.approval_status, f.rejection_reason, '
       "(SELECT GROUP_CONCAT(i.url ORDER BY i.position SEPARATOR '\\n') "
       'FROM field_images i WHERE i.field_id = f.id) AS image_urls';
 
@@ -45,6 +46,8 @@ abstract final class Rows {
       imageUrls: images == null || images.isEmpty ? const [] : images.split('\n'),
       confirmationMode: ConfirmationMode.values.byName(_string(row['confirmation_mode'])),
       isActive: _bool(row['is_active']),
+      approvalStatus: ApprovalStatus.values.byName(_string(row['approval_status'])),
+      rejectionReason: _nullableString(row['rejection_reason']),
     );
   }
 

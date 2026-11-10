@@ -29,6 +29,10 @@ final class SportsField {
   /// Da li je teren aktivan i dostupan za rezervisanje.
   final bool isActive;
 
+  final ApprovalStatus approvalStatus;
+
+  final String? rejectionReason;
+
   SportsField({
     required this.id,
     required this.ownerId,
@@ -42,6 +46,8 @@ final class SportsField {
     List<String> imageUrls = const [],
     required this.confirmationMode,
     this.isActive = true,
+    this.approvalStatus = ApprovalStatus.approved,
+    this.rejectionReason,
   }) : imageUrls = List.unmodifiable(imageUrls);
 
   /// Kreira novu instancu sa izmenjenim podacima.
@@ -56,6 +62,8 @@ final class SportsField {
     List<String>? imageUrls,
     ConfirmationMode? confirmationMode,
     bool? isActive,
+    ApprovalStatus? approvalStatus,
+    String? rejectionReason,
   }) {
     return SportsField(
       id: id,
@@ -70,6 +78,8 @@ final class SportsField {
       imageUrls: imageUrls ?? this.imageUrls,
       confirmationMode: confirmationMode ?? this.confirmationMode,
       isActive: isActive ?? this.isActive,
+      approvalStatus: approvalStatus ?? this.approvalStatus,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
     );
   }
 }

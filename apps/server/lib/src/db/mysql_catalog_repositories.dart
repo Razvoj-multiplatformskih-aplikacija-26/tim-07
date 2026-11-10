@@ -5,8 +5,9 @@ import 'rows.dart';
 
 final class MySqlSportsFieldRepository implements SportsFieldRepository {
   final SqlExecutor _db;
+  final DateTime Function() _clock;
 
-  MySqlSportsFieldRepository(this._db);
+  MySqlSportsFieldRepository(this._db, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
 
   Future<List<SportsField>> _select(String where, [List<Object?> values = const []]) async {
     final rows = await _db.query(
@@ -20,8 +21,10 @@ final class MySqlSportsFieldRepository implements SportsFieldRepository {
   Future<List<SportsField>> getFields() => _select('');
 
   @override
-  Future<List<SportsField>> getPublicFields() =>
-      _select("WHERE f.is_active = TRUE AND f.approval_status = 'approved'");
+  Future<List<SportsField>> getPublicFields() async {
+    final fields = await _select("WHERE f.is_active = TRUE AND f.approval_status = 'approved'");
+    return fields.where(isFieldPublic).toList();
+  }
 
   @override
   Future<List<SportsField>> getFieldsByOwner(UserId ownerId) =>
@@ -61,20 +64,64 @@ final class MySqlSportsFieldRepository implements SportsFieldRepository {
 
   @override
   Future<SportsField> updateField(SportsField field) async {
-    final result = await _db.query(
+    final current = await getFieldById(field.id);
+    if (current == null) throw EntityNotFound('field', field.id.value);
+    final approval = approvalStatusAfterOwnerEdit(current.approvalStatus);
+
+    await _db.query(
       'UPDATE sports_fields SET name = ?, description = ?, sport = ?, address = ?, city = ?, '
-      'price_per_hour = ?, contact_phone = ?, confirmation_mode = ?, is_active = ? WHERE id = ?',
+      'price_per_hour = ?, contact_phone = ?, confirmation_mode = ?, is_active = ?, '
+      'approval_status = ? WHERE id = ?',
       [
         field.name, field.description, field.sport.name, field.address, field.city,
         field.pricePerHour, field.contactPhone, field.confirmationMode.name,
-        field.isActive, field.id.value,
+        field.isActive, approval.name, field.id.value,
       ],
     );
-    if (result.affectedRows == 0 && await getFieldById(field.id) == null) {
-      throw EntityNotFound('field', field.id.value);
-    }
     await _replaceImages(field.id, field.imageUrls);
     return (await getFieldById(field.id))!;
+  }
+
+  @override
+  Future<List<SportsField>> getFieldsAwaitingApproval() async {
+    final rows = await _db.query(
+      'SELECT ${Rows.fieldColumns} FROM sports_fields f '
+      "WHERE f.approval_status = 'pending' ORDER BY f.created_at, f.id",
+    );
+    return [for (final row in rows) Rows.field(row)];
+  }
+
+  @override
+  Future<SportsField> reviewField({
+    required FieldId fieldId,
+    required UserId reviewerId,
+    required ApprovalStatus decision,
+    String? reason,
+  }) async {
+    final current = await getFieldById(fieldId);
+    if (current == null) throw EntityNotFound('field', fieldId.value);
+    if (decision == ApprovalStatus.pending ||
+        !canTransitionApprovalStatus(current.approvalStatus, decision)) {
+      throw ApprovalTransitionNotAllowed(current.approvalStatus, decision);
+    }
+
+    final result = await _db.query(
+      'UPDATE sports_fields SET approval_status = ?, rejection_reason = ?, reviewed_by = ?, '
+      'reviewed_at = ? WHERE id = ? AND approval_status = ?',
+      [
+        decision.name,
+        decision == ApprovalStatus.rejected ? reason : null,
+        reviewerId.value,
+        _clock().toUtc(),
+        fieldId.value,
+        current.approvalStatus.name,
+      ],
+    );
+    if (result.affectedRows == 0) {
+      final latest = await getFieldById(fieldId);
+      throw ApprovalTransitionNotAllowed(latest?.approvalStatus ?? current.approvalStatus, decision);
+    }
+    return (await getFieldById(fieldId))!;
   }
 
   Future<void> _replaceImages(FieldId id, List<String> urls) async {

@@ -23,6 +23,7 @@ export 'src/rules/reservation_auto_status.dart';
 export 'src/rules/reservation_validation_error.dart';
 export 'src/rules/reservation_validation.dart';
 export 'src/rules/domain_exceptions.dart';
+export 'src/rules/field_approval.dart';
 
 // T08 — Preklapanje, blokirani termini i radno vreme.
 export 'src/rules/reservation_overlap.dart';

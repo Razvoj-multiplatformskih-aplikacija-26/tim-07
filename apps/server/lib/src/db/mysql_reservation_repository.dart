@@ -76,13 +76,12 @@ final class MySqlReservationRepository implements ReservationRepository {
       if (userLock.isEmpty) throw EntityNotFound('user', userId.value);
 
       final fieldRows = await tx.query(
-        'SELECT ${Rows.fieldColumns}, f.approval_status FROM sports_fields f WHERE f.id = ?',
+        'SELECT ${Rows.fieldColumns} FROM sports_fields f WHERE f.id = ?',
         [fieldId.value],
       );
       final field = Rows.field(fieldRows.first);
-      final approved = fieldRows.first['approval_status'] == 'approved';
 
-      if (!field.isActive || !approved) {
+      if (!isFieldPublic(field)) {
         throw const ReservationRuleViolation(FieldUnavailable());
       }
 
