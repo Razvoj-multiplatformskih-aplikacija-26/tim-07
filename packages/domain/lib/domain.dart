@@ -14,6 +14,7 @@ export 'src/models/sports_field.dart';
 export 'src/models/reservation.dart';
 export 'src/models/field_schedule.dart';
 export 'src/models/review.dart';
+export 'src/models/occupancy.dart';
 
 // T06 — Statusi i automatski životni ciklus.
 export 'src/rules/reservation_transitions.dart';
@@ -25,6 +26,7 @@ export 'src/rules/reservation_validation.dart';
 export 'src/rules/domain_exceptions.dart';
 export 'src/rules/field_approval.dart';
 export 'src/rules/field_schedule_validation.dart';
+export 'src/rules/occupancy.dart';
 
 // T08 — Preklapanje, blokirani termini i radno vreme.
 export 'src/rules/reservation_overlap.dart';
@@ -38,3 +40,4 @@ export 'src/repositories/reservation_repository.dart';
 export 'src/repositories/sports_field_repository.dart';
 export 'src/repositories/field_schedule_repository.dart';
 export 'src/repositories/user_repository.dart';
+export 'src/repositories/statistics_repository.dart';
