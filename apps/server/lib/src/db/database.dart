@@ -108,6 +108,7 @@ final class Database implements SqlExecutor {
 
   Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) {
     return withConnection((connection) async {
+      await connection.query('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
       await connection.query('START TRANSACTION');
       try {
         final result = await action(connection);

@@ -70,17 +70,17 @@ final class MySqlReservationRepository implements ReservationRepository {
     return _database.transaction((tx) async {
       final now = _now();
 
+      final fieldLock = await tx.query('SELECT id FROM sports_fields WHERE id = ? FOR UPDATE', [fieldId.value]);
+      if (fieldLock.isEmpty) throw EntityNotFound('field', fieldId.value);
+      final userLock = await tx.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId.value]);
+      if (userLock.isEmpty) throw EntityNotFound('user', userId.value);
+
       final fieldRows = await tx.query(
-        'SELECT ${Rows.fieldColumns}, f.approval_status FROM sports_fields f '
-        'WHERE f.id = ? FOR UPDATE',
+        'SELECT ${Rows.fieldColumns}, f.approval_status FROM sports_fields f WHERE f.id = ?',
         [fieldId.value],
       );
-      if (fieldRows.isEmpty) throw EntityNotFound('field', fieldId.value);
       final field = Rows.field(fieldRows.first);
       final approved = fieldRows.first['approval_status'] == 'approved';
-
-      final userRows = await tx.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId.value]);
-      if (userRows.isEmpty) throw EntityNotFound('user', userId.value);
 
       if (!field.isActive || !approved) {
         throw const ReservationRuleViolation(FieldUnavailable());
