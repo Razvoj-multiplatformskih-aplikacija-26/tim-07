@@ -3,11 +3,13 @@
 #
 #   docker build -f apps/server/Dockerfile .
 
-FROM dart:3.13 AS build
+FROM dart:3.13.5 AS build
 WORKDIR /src
 
 # Koreni pubspec navodi i Flutter aplikacije, koje u Dart slici ne mogu da
 # se razreše. Pravimo workspace samo od čistih Dart paketa i servera.
+# Isti lock kao lokalno, da Docker dobije iste verzije paketa.
+COPY pubspec.lock ./
 COPY packages/ packages/
 COPY apps/server/ apps/server/
 RUN printf 'name: tim_07_workspace\npublish_to: none\nenvironment:\n  sdk: ^3.13.0\nworkspace:\n' > pubspec.yaml \
@@ -29,5 +31,7 @@ WORKDIR /app
 COPY --from=build /src/server /app/server
 COPY apps/server/migrations/ /app/migrations/
 
+# Server ne radi kao root.
+USER 65532:65532
 EXPOSE 8080
 CMD ["/app/server"]
