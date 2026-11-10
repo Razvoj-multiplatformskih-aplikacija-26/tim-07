@@ -147,6 +147,8 @@ Sve ostalo traži `Authorization: Bearer <token>`. Bez tokena odgovor je `401` s
 | Izmena terena, cene, radnog vremena, blokada | vlasnik **tog terena** | — | — |
 | Odobravanje objekta | administrator | teren čeka odobrenje | — |
 
+**Odobravanje terena.** Teren ima stanje odobrenosti `pending` → `approved` ili `rejected`. Nov teren ulazi kao `pending` i javno je vidljiv (i može da se rezerviše) samo kada je aktivan i `approved` (`isFieldPublic` u domenu). Odbijanje čuva razlog. Kada vlasnik izmeni odbijen teren, teren ponovo čeka odobrenje (`approvalStatusAfterOwnerEdit`); izmena podataka nikad ne može sama da odobri teren. Administrator može i da povuče odobrenje (`approved` → `rejected`) kada rešava prijavljenu nepravilnost. Prelaze određuje `canTransitionApprovalStatus`, a server upis radi uz uslov na staro stanje, pa od dve istovremene odluke prolazi jedna.
+
 `completed` i `cancelled` su konačna stanja: niko ih ne menja. Korisnik nikad ne potvrđuje ni odbija. Vlasnik ne dira rezervacije ni terene drugog vlasnika. Zabranjena akcija daje `403` sa kodom `forbidden`.
 
 Prava se pišu **jednom**, u `domain` (`canConfirmReservation`, `canCancelReservation(user, reservation, field)`, `canManageField(user, field)` …). Klijenti ih koriste da sakriju dugmad, a server da odbije poziv.

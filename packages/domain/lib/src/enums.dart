@@ -48,3 +48,9 @@ enum WeekDay {
   saturday,
   sunday,
 }
+
+enum ApprovalStatus {
+  pending,
+  approved,
+  rejected,
+}

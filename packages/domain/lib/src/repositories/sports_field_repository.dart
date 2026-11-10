@@ -25,4 +25,13 @@ abstract interface class SportsFieldRepository {
   });
 
   Future<SportsField> updateField(SportsField field);
+
+  Future<List<SportsField>> getFieldsAwaitingApproval();
+
+  Future<SportsField> reviewField({
+    required FieldId fieldId,
+    required UserId reviewerId,
+    required ApprovalStatus decision,
+    String? reason,
+  });
 }
