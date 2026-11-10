@@ -1,14 +1,6 @@
-# Server se gradi iz korena repozitorijuma (context: .), jer zavisi od
-# paketa u packages/ preko Pub workspace-a.
-#
-#   docker build -f apps/server/Dockerfile .
-
 FROM dart:3.13.5 AS build
 WORKDIR /src
 
-# Koreni pubspec navodi i Flutter aplikacije, koje u Dart slici ne mogu da
-# se razreše. Pravimo workspace samo od čistih Dart paketa i servera.
-# Isti lock kao lokalno, da Docker dobije iste verzije paketa.
 COPY pubspec.lock ./
 COPY packages/ packages/
 COPY apps/server/ apps/server/
@@ -24,14 +16,12 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates tzdata curl \
  && rm -rf /var/lib/apt/lists/*
 
-# Radno vreme terena je lokalno (odluka 5), pa server radi u zoni objekta.
 ENV TZ=Europe/Belgrade
 
 WORKDIR /app
 COPY --from=build /src/server /app/server
 COPY apps/server/migrations/ /app/migrations/
 
-# Server ne radi kao root.
 USER 65532:65532
 EXPOSE 8080
 CMD ["/app/server"]

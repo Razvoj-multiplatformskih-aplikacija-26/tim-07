@@ -84,7 +84,6 @@ final class SlotAlreadyTaken extends ReservationValidationError {
   String get message => 'Termin se preklapa sa postojećom rezervacijom.';
 }
 
-/// Teren nije aktivan ili nije odobren, pa se ne može rezervisati.
 final class FieldUnavailable extends ReservationValidationError {
   const FieldUnavailable();
 

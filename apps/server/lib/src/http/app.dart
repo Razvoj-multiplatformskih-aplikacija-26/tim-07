@@ -6,18 +6,10 @@ import 'package:relic/relic.dart';
 import 'json.dart';
 import 'middleware.dart';
 
-/// Grupa ruta koja se kači na ruter (zdravlje, prijava, rezervacije…).
-///
-/// Svaka grupa dobija svoje zavisnosti kroz konstruktor, pa se u testu
-/// može podići server sa lažnim repozitorijumima.
 abstract interface class RouteModule {
   void register(RelicRouter router);
 }
 
-/// `GET /health` za Docker i za proveru da server radi.
-///
-/// [isDatabaseReady] je opcion: kad postoji, `/health` vraća `503` dok
-/// baza ne odgovara.
 final class HealthRoutes implements RouteModule {
   final Future<bool> Function()? isDatabaseReady;
 
@@ -38,7 +30,6 @@ final class HealthRoutes implements RouteModule {
   }
 }
 
-/// Sklapa ceo HTTP handler: middleware + rute + 404 za nepoznatu adresu.
 Handler buildHandler({
   required List<RouteModule> modules,
   List<String> corsAllowedOrigins = const [],
@@ -62,10 +53,6 @@ Handler buildHandler({
       .addHandler(router.asHandler);
 }
 
-/// Podiže HTTP server nad [handler].
-///
-/// Port `0` bira slobodan port (koristi se u testovima), a pravi port se
-/// čita iz [RelicServer.port].
 Future<RelicServer> startServer(
   Handler handler, {
   required String host,

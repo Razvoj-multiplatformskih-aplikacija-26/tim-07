@@ -4,19 +4,10 @@ import 'dart:io';
 
 import 'package:mysql1/mysql1.dart';
 
-/// Nešto nad čim se izvršava SQL: ceo pool ili jedna otvorena transakcija.
-///
-/// Repozitorijumi primaju [SqlExecutor], pa isti kod radi i van i unutar
-/// transakcije (npr. provera preklapanja i upis u istoj transakciji).
 abstract interface class SqlExecutor {
   Future<Result> query(String sql, [List<Object?>? values]);
 }
 
-/// Pool MySQL konekcija.
-///
-/// `mysql1` daje jednu konekciju koja izvršava upit po upit. Bez poola bi
-/// svi zahtevi čekali jedan drugog, a dve transakcije ne bi mogle da idu
-/// paralelno — pa ni zaključavanje iz T39 ne bi imalo šta da zaključa.
 final class Database implements SqlExecutor {
   final ConnectionSettings _settings;
   final int _maxConnections;
@@ -28,10 +19,6 @@ final class Database implements SqlExecutor {
 
   Database._(this._settings, this._maxConnections);
 
-  /// Povezuje se na bazu i čeka je ako još nije spremna.
-  ///
-  /// Baza u Docker-u se podiže sporije od servera, pa server pokušava
-  /// [attempts] puta sa pauzom [delay] umesto da odmah padne.
   static Future<Database> connect({
     required String host,
     required int port,
@@ -72,7 +59,6 @@ final class Database implements SqlExecutor {
   Future<MySqlConnection> _openConnection() async {
     final connection = await MySqlConnection.connect(_settings);
     _open++;
-    // Vreme u bazi je uvek UTC (odluka 5), nezavisno od zone kontejnera.
     await connection.query("SET time_zone = '+00:00'");
     return connection;
   }
@@ -112,7 +98,6 @@ final class Database implements SqlExecutor {
       _release(connection);
       return result;
     } on MySqlException {
-      // Greška iz SQL-a: konekcija je ispravna.
       _release(connection);
       rethrow;
     } catch (_) {
@@ -121,10 +106,6 @@ final class Database implements SqlExecutor {
     }
   }
 
-  /// Izvršava [action] u jednoj transakciji na jednoj konekciji.
-  ///
-  /// Ako [action] baci izuzetak, sve izmene se poništavaju (`ROLLBACK`) i
-  /// izuzetak ide dalje, pa ga HTTP sloj pretvara u kod greške.
   Future<T> transaction<T>(Future<T> Function(SqlExecutor tx) action) {
     return withConnection((connection) async {
       await connection.query('START TRANSACTION');
@@ -139,9 +120,6 @@ final class Database implements SqlExecutor {
     });
   }
 
-  /// Izvršava [action] nad jednom konekcijom, bez transakcije.
-  ///
-  /// Treba kad nešto važi za konekciju, npr. `GET_LOCK` pri migracijama.
   Future<T> withConnection<T>(Future<T> Function(SqlExecutor connection) action) async {
     final connection = await _acquire();
     var broken = false;
@@ -155,7 +133,6 @@ final class Database implements SqlExecutor {
     }
   }
 
-  /// Da li baza odgovara (za `/health`).
   Future<bool> ping() async {
     try {
       await query('SELECT 1');

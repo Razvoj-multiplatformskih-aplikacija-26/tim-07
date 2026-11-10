@@ -1,15 +1,3 @@
--- Početna šema Terenza (T35). Tabele prate modele iz packages/domain.
---
--- Dogovor (docs/kt2-decisions.md, odluka 5):
---   * novac je INT u dinarima,
---   * trenuci su DATETIME u UTC (server postavlja time_zone = '+00:00'),
---   * radno vreme je TIME po lokalnom vremenu objekta,
---   * stanja i ostali enumi su tekst sa istim kodovima kao na mreži.
---
--- MySQL nema ograničenje koje zabranjuje preklapanje intervala (kao EXCLUDE
--- u PostgreSQL-u), pa preklapanje čuva server zaključavanjem reda terena
--- (odluka 2). Baza čuva ono što ume: strane ključeve, CHECK i indekse.
-
 CREATE TABLE users (
   id            INT          NOT NULL AUTO_INCREMENT,
   first_name    VARCHAR(80)  NOT NULL,
@@ -18,7 +6,6 @@ CREATE TABLE users (
   phone_number  VARCHAR(32)  NOT NULL,
   date_of_birth DATE         NOT NULL,
   role          VARCHAR(16)  NOT NULL,
-  -- Samo heš lozinke (Argon2id, PHC format), nikad lozinka.
   password_hash VARCHAR(255) NOT NULL,
   created_at    DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
@@ -38,7 +25,6 @@ CREATE TABLE sports_fields (
   contact_phone     VARCHAR(32)  NOT NULL,
   confirmation_mode VARCHAR(16)  NOT NULL,
   is_active         BOOLEAN      NOT NULL DEFAULT TRUE,
-  -- Administrator odobrava objavljivanje (T65). Javno su vidljivi samo odobreni.
   approval_status   VARCHAR(16)  NOT NULL DEFAULT 'pending',
   created_at        DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
@@ -49,12 +35,10 @@ CREATE TABLE sports_fields (
   CONSTRAINT sports_fields_price_valid CHECK (price_per_hour >= 0),
   CONSTRAINT sports_fields_confirmation_valid CHECK (confirmation_mode IN ('automatic', 'manual')),
   CONSTRAINT sports_fields_approval_valid CHECK (approval_status IN ('pending', 'approved', 'rejected')),
-  -- Javni katalog filtrira po gradu i sportu (odluka 6).
   INDEX sports_fields_catalog_idx (approval_status, is_active, city, sport),
   INDEX sports_fields_owner_idx (owner_id)
 );
 
--- SportsField.imageUrls: lista adresa slika, u zadatom redosledu.
 CREATE TABLE field_images (
   field_id INT           NOT NULL,
   position INT           NOT NULL,
@@ -64,7 +48,6 @@ CREATE TABLE field_images (
   CONSTRAINT field_images_position_valid CHECK (position >= 0)
 );
 
--- FieldSchedule: radno vreme po danu u nedelji. Dan bez reda znači zatvoreno.
 CREATE TABLE field_schedules (
   field_id    INT         NOT NULL,
   day_of_week VARCHAR(16) NOT NULL,
@@ -79,7 +62,6 @@ CREATE TABLE field_schedules (
   CONSTRAINT field_schedules_hours_valid CHECK (is_open = FALSE OR opens_at < closes_at)
 );
 
--- BlockedPeriod: održavanje ili događaj; teren se tada ne može rezervisati.
 CREATE TABLE blocked_periods (
   id         INT          NOT NULL AUTO_INCREMENT,
   field_id   INT          NOT NULL,
@@ -99,7 +81,6 @@ CREATE TABLE reservations (
   user_id             INT          NOT NULL,
   start_time          DATETIME(3)  NOT NULL,
   end_time            DATETIME(3)  NOT NULL,
-  -- Cena u dinarima u trenutku rezervisanja.
   total_price         INT          NOT NULL,
   status              VARCHAR(16)  NOT NULL,
   payment_status      VARCHAR(16)  NOT NULL DEFAULT 'unpaid',
@@ -114,13 +95,10 @@ CREATE TABLE reservations (
   CONSTRAINT reservations_price_valid CHECK (total_price >= 0),
   CONSTRAINT reservations_status_valid CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')),
   CONSTRAINT reservations_payment_valid CHECK (payment_status IN ('unpaid', 'paid')),
-  -- Provera preklapanja i slobodni termini traže rezervacije terena u vremenu.
   INDEX reservations_field_time_idx (field_id, start_time, end_time),
-  -- "Moje rezervacije" i preklapanje istog korisnika na drugom terenu.
   INDEX reservations_user_time_idx (user_id, start_time)
 );
 
--- Review: ocena terena (korisnik) ili korisnika (vlasnik) posle završene rezervacije.
 CREATE TABLE reviews (
   id                INT         NOT NULL AUTO_INCREMENT,
   reservation_id    INT         NOT NULL,
@@ -142,6 +120,5 @@ CREATE TABLE reviews (
     (type = 'field' AND reviewed_field_id IS NOT NULL AND reviewed_user_id IS NULL) OR
     (type = 'user' AND reviewed_user_id IS NOT NULL AND reviewed_field_id IS NULL)
   ),
-  -- Jedna recenzija iste vrste po rezervaciji i autoru (zahtev 4: server odbija duplikat).
   CONSTRAINT reviews_one_per_reservation UNIQUE (reservation_id, reviewer_id, type)
 );

@@ -1,14 +1,7 @@
 import 'package:domain/domain.dart';
 import 'package:mysql1/mysql1.dart';
 
-/// Prevod između redova MySQL-a i domenskih modela, na jednom mestu.
-///
-/// Repozitorijumi ne čitaju kolone sami, nego zovu ove funkcije. Dogovor iz
-/// odluke 5: novac je `int`, trenuci su UTC, enumi su tekstualni kodovi
-/// (`ReservationStatus.pending` ↔ `'pending'`).
 abstract final class Rows {
-  // Kolone koje svaki SELECT za dati model mora da vrati, istim redom.
-
   static const reservationColumns =
       'r.id, r.field_id, r.user_id, r.start_time, r.end_time, r.total_price, '
       'r.status, r.payment_status, r.checked_in_at, r.cancellation_reason, r.created_at';
@@ -81,14 +74,10 @@ abstract final class Rows {
         createdAt: _dateTime(row['created_at']),
       );
 
-  /// `TimeOfDay` → vrednost za kolonu `TIME` (`'08:30:00'`).
   static String time(TimeOfDay time) =>
       '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
 
-  /// Trenutak za upis: baza čuva UTC, a `mysql1` prima samo UTC.
   static DateTime utc(DateTime value) => value.toUtc();
-
-  // --- Pretvaranje tipova koje vraća mysql1 ---
 
   static int _int(Object? value) => switch (value) {
         final int v => v,
@@ -103,7 +92,6 @@ abstract final class Rows {
         _ => throw FormatException('Očekivana logička vrednost, dobijeno $value'),
       };
 
-  /// `TEXT` kolone mysql1 vraća kao [Blob], a `VARCHAR` kao [String].
   static String _string(Object? value) => switch (value) {
         final String v => v,
         final Blob v => v.toString(),
@@ -119,7 +107,6 @@ abstract final class Rows {
 
   static DateTime? _nullableDateTime(Object? value) => value == null ? null : _dateTime(value);
 
-  /// `TIME` kolonu mysql1 vraća kao [Duration] od ponoći.
   static TimeOfDay _timeOfDay(Object? value) => switch (value) {
         final Duration v => TimeOfDay(hour: v.inHours, minute: v.inMinutes % 60),
         final String v => TimeOfDay(

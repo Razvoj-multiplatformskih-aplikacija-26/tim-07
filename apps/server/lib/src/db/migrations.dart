@@ -2,9 +2,7 @@ import 'dart:io';
 
 import 'database.dart';
 
-/// Jedna migracija: SQL fajl `<verzija>_<naziv>.sql` iz `apps/server/migrations`.
 final class Migration {
-  /// Vremenska oznaka iz imena fajla (`20261110120000`), određuje redosled.
   final String version;
   final String name;
   final String sql;
@@ -13,10 +11,6 @@ final class Migration {
 
   static final _fileName = RegExp(r'^(\d{14})_([a-z0-9_]+)\.sql$');
 
-  /// Čita sve migracije iz [directory], sortirane po verziji.
-  ///
-  /// Fajl sa pogrešnim imenom je greška, a ne tiho preskakanje, da se
-  /// migracija ne bi izgubila zbog slovne greške u imenu.
   static Future<List<Migration>> readDirectory(Directory directory) async {
     if (!await directory.exists()) {
       throw StateError('Folder sa migracijama ne postoji: ${directory.path}');
@@ -51,10 +45,6 @@ final class Migration {
     return migrations;
   }
 
-  /// Deli SQL na naredbe po `;` na kraju reda, bez komentara `--`.
-  ///
-  /// `mysql1` izvršava jednu naredbu po pozivu. Naše migracije ne sadrže
-  /// `;` unutar teksta, pa je ovo dovoljno (i proverava se testom).
   List<String> get statements {
     final withoutComments = sql
         .split('\n')
@@ -72,15 +62,6 @@ final class Migration {
   }
 }
 
-/// Primenjuje migracije koje još nisu primenjene.
-///
-/// Primenjene se pamte u tabeli `schema_migrations`, pa drugo pokretanje
-/// ne radi ništa. Zaključavanje `GET_LOCK` sprečava da dva servera koji se
-/// podižu istovremeno primene istu migraciju dvaput.
-///
-/// MySQL ne može da vrati `CREATE TABLE` unutar transakcije, pa se svaka
-/// migracija upisuje kao primenjena tek kada sve njene naredbe prođu. Ako
-/// neka padne, server se ne podiže i greška kaže koja migracija i naredba.
 final class MigrationRunner {
   final Database database;
   final void Function(String message) log;
@@ -90,9 +71,7 @@ final class MigrationRunner {
 
   static const _lockName = 'terenzo_migrations';
 
-  /// Vraća verzije koje su primenjene u ovom pokretanju.
   Future<List<String>> migrate(List<Migration> migrations) {
-    // GET_LOCK važi za konekciju, pa sve ide kroz jednu.
     return database.withConnection((db) async {
       final lock = await db.query('SELECT GET_LOCK(?, 60) AS acquired', [_lockName]);
       if (lock.first['acquired'] != 1) {
@@ -143,7 +122,6 @@ final class MigrationRunner {
   }
 }
 
-/// Naredba iz migracije nije uspela.
 final class MigrationException implements Exception {
   final Migration migration;
   final int statementNumber;

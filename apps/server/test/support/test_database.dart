@@ -4,11 +4,6 @@ import 'dart:math';
 import 'package:mysql1/mysql1.dart';
 import 'package:server/server.dart';
 
-/// Privremena baza za jedan test fajl, na MySQL-u iz Docker Compose-a.
-///
-/// Pravi bazu `terenzo_test_<nasumično>` kao root (podaci iz `.env` u korenu)
-/// i briše je u [dispose]. Ako MySQL ne radi, [open] vraća `null`, a test se
-/// preskače porukom iz [skipReason].
 final class TestDatabase {
   final Database database;
   final String name;
@@ -51,7 +46,6 @@ final class TestDatabase {
     return TestDatabase._(database, name, admin);
   }
 
-  /// Primenjuje migracije iz `apps/server/migrations`.
   Future<void> migrate() async {
     final migrations = await Migration.readDirectory(Directory('migrations'));
     await MigrationRunner(database).migrate(migrations);

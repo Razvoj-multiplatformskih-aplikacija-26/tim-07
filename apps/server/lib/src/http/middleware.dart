@@ -4,11 +4,6 @@ import 'package:relic/relic.dart';
 
 import 'json.dart';
 
-/// Pretvara izuzetke iz ruta u JSON greške.
-///
-/// [HttpError] postaje odgovor sa svojim kodom. Sve ostalo je `500` sa
-/// kodom `internal`; detalji (stack trace) idu samo u log servera, nikad
-/// klijentu.
 Middleware handleErrors() {
   return (Handler next) {
     return (Request request) async {
@@ -28,11 +23,6 @@ Middleware handleErrors() {
   };
 }
 
-/// CORS za backoffice u pregledaču (odluka 10).
-///
-/// Poreklo se vraća u `Access-Control-Allow-Origin` samo ako je na listi
-/// [allowedOrigins]. Unos `http://localhost:*` dozvoljava svaki port na
-/// localhost-u. Preflight `OPTIONS` dobija odgovor bez prolaska kroz rute.
 Middleware cors(List<String> allowedOrigins) {
   bool isAllowed(String origin) {
     for (final allowed in allowedOrigins) {

@@ -1,12 +1,6 @@
 import 'dart:io';
 
-/// Podešavanja servera.
-///
-/// Sve vrednosti dolaze iz okruženja ili iz `.env` fajla. U kodu nema
-/// tajni ni podrazumevanih lozinki: ako nešto obavezno nedostaje,
-/// server odbija da se podigne i kaže šta fali.
 final class ServerConfig {
-  /// Adresa na kojoj server sluša (`0.0.0.0` u kontejneru).
   final String host;
   final int port;
 
@@ -16,21 +10,14 @@ final class ServerConfig {
   final String dbUser;
   final String dbPassword;
 
-  /// Tajna kojom server potpisuje tokene (HS256).
   final String jwtSecret;
 
-  /// Koliko dugo važi prijava.
   final Duration tokenTtl;
 
-  /// Porekla kojima pregledač sme da šalje zahteve (CORS).
-  ///
-  /// `http://localhost:*` dozvoljava bilo koji port na localhost-u.
   final List<String> corsAllowedOrigins;
 
-  /// Da li server pri podizanju upisuje početne podatke (samo razvoj).
   final bool seedDemoData;
 
-  /// Folder sa SQL migracijama (`migrations` u `apps/server` i u Docker slici).
   final String migrationsDirectory;
 
   const ServerConfig({
@@ -48,9 +35,6 @@ final class ServerConfig {
     this.migrationsDirectory = 'migrations',
   });
 
-  /// Čita podešavanja iz [environment].
-  ///
-  /// Baca [ConfigException] sa spiskom svih problema odjednom.
   factory ServerConfig.fromEnvironment(Map<String, String> environment) {
     final problems = <String>[];
 
@@ -108,12 +92,6 @@ final class ServerConfig {
     return config;
   }
 
-  /// Spaja `.env` fajl (ako postoji) i promenljive okruženja.
-  ///
-  /// `.env` je u korenu repozitorijuma (deli ga sa Docker Compose-om), pa
-  /// se traži u tekućem folderu i do dva nivoa iznad (`apps/server` → koren).
-  /// Promenljive okruženja imaju prednost, pa Docker Compose može da
-  /// pregazi vrednost iz `.env` (npr. `DB_HOST=db`).
   static Future<ServerConfig> load({String? envFilePath}) async {
     final file = envFilePath != null ? File(envFilePath) : _findDotEnv();
     final fromFile = file != null && await file.exists()
@@ -137,7 +115,6 @@ final class ServerConfig {
   }
 }
 
-/// Podešavanja nisu potpuna ili su neispravna.
 final class ConfigException implements Exception {
   final List<String> problems;
 
@@ -148,10 +125,6 @@ final class ConfigException implements Exception {
       'Neispravna podešavanja servera:\n${problems.map((p) => '  - $p').join('\n')}';
 }
 
-/// Čita jednostavan `.env` format: `KLJUČ=vrednost`, `#` za komentar.
-///
-/// Navodnici oko vrednosti se skidaju. Ne podržava višelinijske vrednosti
-/// ni zamenu `${...}`, jer nam ne trebaju.
 Map<String, String> parseDotEnv(String content) {
   final result = <String, String>{};
 
