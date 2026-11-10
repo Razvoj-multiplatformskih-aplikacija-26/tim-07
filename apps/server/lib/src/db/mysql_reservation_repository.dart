@@ -139,10 +139,23 @@ final class MySqlReservationRepository implements ReservationRepository {
   Future<Reservation> updateReservationStatus({
     required ReservationId reservationId,
     required ReservationStatus status,
+  }) =>
+      changeStatus(reservationId: reservationId, to: status);
+
+  Future<Reservation> changeStatus({
+    required ReservationId reservationId,
+    required ReservationStatus to,
+    ReservationStatus? from,
+    String? reason,
   }) {
+    final status = to;
     return _database.transaction((tx) async {
       final now = _now();
       final reservation = await _lockAndRefresh(tx, reservationId, now);
+
+      if (from != null && reservation.status != from) {
+        throw const ReservationRuleViolation(InvalidReservationStatus());
+      }
 
       if (!canTransitionReservationStatus(reservation.status, status)) {
         throw const ReservationRuleViolation(InvalidReservationStatus());
@@ -158,10 +171,10 @@ final class MySqlReservationRepository implements ReservationRepository {
       }
 
       await tx.query(
-        'UPDATE reservations SET status = ? WHERE id = ?',
-        [status.name, reservationId.value],
+        'UPDATE reservations SET status = ?, cancellation_reason = COALESCE(?, cancellation_reason) WHERE id = ?',
+        [status.name, reason, reservationId.value],
       );
-      return reservation.copyWith(status: status);
+      return reservation.copyWith(status: status, cancellationReason: reason);
     });
   }
 

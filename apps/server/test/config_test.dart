@@ -25,6 +25,13 @@ void main() {
       expect(config.corsAllowedOrigins,
           ['http://localhost:*', 'https://admin.example.com']);
       expect(config.seedDemoData, isFalse);
+      expect(config.notificationApiKey, isEmpty);
+    });
+
+    test('ključ spoljnog servisa čita se samo iz okruženja servera', () {
+      final config = ServerConfig.fromEnvironment({..._valid, 'NOTIFICATION_API_KEY': ' kljuc '});
+
+      expect(config.notificationApiKey, 'kljuc');
     });
 
     test('prijavljuje sve vrednosti koje nedostaju odjednom', () {
