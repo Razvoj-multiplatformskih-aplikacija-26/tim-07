@@ -14,3 +14,5 @@ export 'src/auth/tokens.dart';
 export 'src/auth/auth_middleware.dart';
 export 'src/auth/credential_store.dart';
 export 'src/auth/auth_routes.dart';
+export 'src/notifications/notification_gateway.dart';
+export 'src/reservations/reservation_decisions.dart';

@@ -187,9 +187,13 @@ Mobilna i desktop aplikacija ne podležu CORS-u, ali dobijaju ista zaglavlja.
 
 **Odluka.** Spoljni servis teme je **slanje obaveštenja korisniku** (e-pošta / push) kada vlasnik potvrdi ili odbije rezervaciju. Server ga poziva kroz port `NotificationGateway`. Za KT2 implementacija je `FakeNotificationGateway`, koja upisuje poruku u log. Ključ servisa (`NOTIFICATION_API_KEY`) postoji samo u `.env` servera.
 
-Pad servisa ne poništava potvrdu: rezervacija se prvo upiše, pa se zatim šalje obaveštenje, a greška slanja se samo zapiše u log.
+Pad servisa ne poništava potvrdu: rezervacija se prvo upiše (transakcija se završi), pa se zatim šalje obaveštenje, a greška slanja se samo zapiše u log. Slanje ima vremensko ograničenje od 5 sekundi, pa servis koji ne odgovara ne zadržava odgovor vlasniku. Bez ključa obaveštenje se ne šalje, a potvrda i dalje prolazi.
 
-**Odbačeno.** *Klijent sam šalje e-poštu preko servisa.* Ključ bi morao da bude u aplikaciji, pa bi ga svako mogao izvući iz APK-a ili iz JavaScript-a u pregledaču.
+Potvrda i odbijanje (`ReservationDecisions` u serveru) važe samo za rezervaciju **na čekanju**, i to se proverava u istoj zaključanoj transakciji kao i upis, pa vlasnik ne može da „odbije“ rezervaciju koja je u međuvremenu potvrđena. Razlog odbijanja se čuva u `cancellation_reason`.
+
+**Odbačeno.**
+- *Klijent sam šalje e-poštu preko servisa.* Ključ bi morao da bude u aplikaciji, pa bi ga svako mogao izvući iz APK-a ili iz JavaScript-a u pregledaču.
+- *Slanje unutar transakcije, pa poništavanje potvrde ako slanje ne uspe.* Spor ili nedostupan servis bi držao zaključan teren i obarao potvrde, a obaveštenje je sporedno u odnosu na samu rezervaciju.
 
 ## 13. Greške na mreži
 

@@ -20,6 +20,8 @@ final class ServerConfig {
 
   final String migrationsDirectory;
 
+  final String notificationApiKey;
+
   const ServerConfig({
     required this.host,
     required this.port,
@@ -33,6 +35,7 @@ final class ServerConfig {
     required this.corsAllowedOrigins,
     required this.seedDemoData,
     this.migrationsDirectory = 'migrations',
+    this.notificationApiKey = '',
   });
 
   factory ServerConfig.fromEnvironment(Map<String, String> environment) {
@@ -79,6 +82,7 @@ final class ServerConfig {
       migrationsDirectory: environment['MIGRATIONS_DIR']?.trim().isNotEmpty == true
           ? environment['MIGRATIONS_DIR']!.trim()
           : 'migrations',
+      notificationApiKey: environment['NOTIFICATION_API_KEY']?.trim() ?? '',
     );
 
     if (config.jwtSecret.isNotEmpty && config.jwtSecret.length < 32) {
