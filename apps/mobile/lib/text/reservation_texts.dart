@@ -36,6 +36,7 @@ String validationMessage(ReservationValidationError error) {
     OutsideWorkingHours() => 'Termin je van radnog vremena terena.',
     FieldBlocked() => 'Teren je blokiran u izabranom terminu.',
     SlotAlreadyTaken() => 'Termin se preklapa sa postojećom rezervacijom.',
+    FieldUnavailable() => 'Teren trenutno nije dostupan za rezervisanje.',
   };
 }
 

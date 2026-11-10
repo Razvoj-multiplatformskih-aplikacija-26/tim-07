@@ -22,6 +22,7 @@ export 'src/rules/reservation_auto_status.dart';
 // T07 — Tipizirane greške i validacije.
 export 'src/rules/reservation_validation_error.dart';
 export 'src/rules/reservation_validation.dart';
+export 'src/rules/domain_exceptions.dart';
 
 // T08 — Preklapanje, blokirani termini i radno vreme.
 export 'src/rules/reservation_overlap.dart';
@@ -31,3 +32,8 @@ export 'src/rules/reservation_price.dart';
 
 // T09 — Repository port za rezervacije.
 export 'src/repositories/reservation_repository.dart';
+
+// T37 — Portovi za terene, radno vreme, blokade i korisnike.
+export 'src/repositories/sports_field_repository.dart';
+export 'src/repositories/field_schedule_repository.dart';
+export 'src/repositories/user_repository.dart';
