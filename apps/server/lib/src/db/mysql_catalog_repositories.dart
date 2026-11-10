@@ -136,7 +136,7 @@ final class MySqlSportsFieldRepository implements SportsFieldRepository {
 }
 
 final class MySqlFieldScheduleRepository implements FieldScheduleRepository {
-  final SqlExecutor _db;
+  final Database _db;
 
   MySqlFieldScheduleRepository(this._db);
 
@@ -154,20 +154,28 @@ final class MySqlFieldScheduleRepository implements FieldScheduleRepository {
 
   @override
   Future<void> replaceSchedules(FieldId fieldId, List<FieldSchedule> schedules) async {
-    await _db.query('DELETE FROM field_schedules WHERE field_id = ?', [fieldId.value]);
-    for (final schedule in schedules) {
-      await _db.query(
-        'INSERT INTO field_schedules (field_id, day_of_week, opens_at, closes_at, is_open) '
-        'VALUES (?, ?, ?, ?, ?)',
-        [
-          fieldId.value,
-          schedule.dayOfWeek.name,
-          Rows.time(schedule.opensAt),
-          Rows.time(schedule.closesAt),
-          schedule.isOpen,
-        ],
-      );
-    }
+    final error = validateFieldSchedule(fieldId: fieldId, schedules: schedules);
+    if (error != null) throw ScheduleRuleViolation(error);
+
+    await _db.transaction((tx) async {
+      final field = await tx.query('SELECT id FROM sports_fields WHERE id = ? FOR UPDATE', [fieldId.value]);
+      if (field.isEmpty) throw EntityNotFound('field', fieldId.value);
+
+      await tx.query('DELETE FROM field_schedules WHERE field_id = ?', [fieldId.value]);
+      for (final schedule in schedules) {
+        await tx.query(
+          'INSERT INTO field_schedules (field_id, day_of_week, opens_at, closes_at, is_open) '
+          'VALUES (?, ?, ?, ?, ?)',
+          [
+            fieldId.value,
+            schedule.dayOfWeek.name,
+            Rows.time(schedule.opensAt),
+            Rows.time(schedule.closesAt),
+            schedule.isOpen,
+          ],
+        );
+      }
+    });
   }
 
   @override

@@ -31,6 +31,8 @@ Uz preklapanje važe i ostala pravila iz KT1: radno vreme, budućnost i ispravno
 
 **Odluka.** Konačnu odluku donosi **server**, pre svakog upisa, pozivom istih funkcija iz `domain` (`validateReservationSlot`, `validateCancellation`, `canTransitionReservationStatus`, `resolveReservationStatus`). Provera i upis su u **jednoj transakciji** koja **prvo** zaključa red terena i red korisnika (`SELECT id … FOR UPDATE`), a tek onda čita rezervacije, radno vreme i blokade. Drugi zahtev za isti teren (ili istog korisnika, jer korisnik ne sme da ima dve rezervacije u isto vreme ni na različitim terenima) čeka da se prva transakcija završi, pa tek onda čita rezervacije i vidi novi upis. Zaključavanje uvek ide istim redom (teren, pa korisnik), pa dve transakcije ne mogu da čekaju jedna drugu u krug (deadlock).
 
+Izmena radnog vremena zaključava isti red terena, a stari raspored se briše i novi upisuje u jednoj transakciji. Rezervacija koja stigne u isto vreme zato se proverava ili po starom ili po novom rasporedu, nikad po delimično upisanom. Pre upisa raspored proverava `validateFieldSchedule` iz domena (otvaranje pre zatvaranja, ispravno vreme, jedan red po danu), a neispravan raspored ostavlja stari netaknut.
+
 Transakcije rade u nivou izolacije `READ COMMITTED`: svaka naredba vidi poslednje potvrđene podatke. U podrazumevanom `REPEATABLE READ` transakcija čita sliku baze napravljenu pri prvom običnom čitanju, pa bi čitanje pre zaključavanja dalo staru sliku bez tuđe rezervacije.
 
 Baza dodatno čuva ono što ume da izrazi: strani ključevi, `CHECK (start_time < end_time)`, `CHECK` nad dozvoljenim tekstom stanja, `CHECK (price >= 0)`.
