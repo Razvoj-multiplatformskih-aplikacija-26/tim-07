@@ -25,6 +25,17 @@ Future<void> main() async {
   );
   stdout.writeln('Povezan sa bazom ${config.dbHost}:${config.dbPort}/${config.dbName}');
 
+  // Šema se pravi samo iz fajlova u repozitorijumu (T35).
+  try {
+    final migrations = await Migration.readDirectory(Directory(config.migrationsDirectory));
+    await MigrationRunner(database, log: stdout.writeln).migrate(migrations);
+  } on Object catch (error) {
+    stderr.writeln(error);
+    await database.close();
+    exitCode = 1;
+    return;
+  }
+
   final handler = buildHandler(
     modules: [HealthRoutes(isDatabaseReady: database.ping)],
     corsAllowedOrigins: config.corsAllowedOrigins,

@@ -1,0 +1,4 @@
+# Testovi označeni sa "db" traže MySQL iz Docker Compose-a (docker compose up db).
+# Bez baze se preskaču i kažu zašto. Samo oni: dart test -t db
+tags:
+  db:
