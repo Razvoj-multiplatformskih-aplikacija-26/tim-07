@@ -160,15 +160,18 @@ Mobilna i desktop aplikacija ne podležu CORS-u, ali dobijaju ista zaglavlja.
 ## 11. Prijava i token
 
 **Odluka.**
-- Lozinke se čuvaju kao **PBKDF2-HMAC-SHA256** heš sa nasumičnom solju po korisniku i 100 000 iteracija (`pbkdf2-sha256$<iteracije>$<so>$<heš>`). Poređenje heša je u konstantnom vremenu.
+- Lozinke se čuvaju kao **Argon2id** heš (parametri OWASP: 19 MiB memorije, 2 prolaza) sa nasumičnom solju po korisniku, u PHC formatu (`$argon2id$v=19$m=19456,t=2,p=1$<so>$<heš>`). Format nosi parametre, pa se kasnije mogu pojačati bez promene šeme. Računa se u posebnom isolate-u, da ne blokira druge zahteve. Isto kao u primeru Rafstoran.
 - `POST /auth/login` vraća potpisan **JWT (HS256)** sa `sub` (id korisnika), `role` i `exp`. Tajna i trajanje su u `.env` (`JWT_SECRET`, `JWT_TTL_MINUTES`).
 - Middleware proverava potpis i istek pri svakom pozivu. Istekao token → `401` sa kodom `token_expired`, lažan ili izmenjen → `401` sa kodom `invalid_token`.
 - Identitet se uzima **samo iz tokena**. Polje `userId` u telu zahteva se ignoriše.
-- Pogrešna lozinka i nepostojeći e-mail daju istu grešku (`invalid_credentials`), da se ne otkrije koji nalozi postoje.
+- Pogrešna lozinka i nepostojeći e-mail daju istu grešku (`invalid_credentials`) i traju isto (i za nepostojeći nalog proverava se heš), da se ne otkrije koji nalozi postoje.
+- Odjava ne treba poziv servera: token se ne čuva na serveru, pa ga klijent briše iz skladišta, a server ga odbija kada istekne.
 
 **Odbačeno.**
 - *Sesije u bazi (nasumičan id u tabeli).* Lako se poništavaju, ali svaki poziv čita bazu. JWT je dovoljan za KT2, a poništavanje se ostvaruje kratkim trajanjem.
+- *PBKDF2-HMAC-SHA256.* Takođe dozvoljen, ali troši samo procesor, pa ga grafičke kartice napadaju mnogo brže nego Argon2id, koji troši i memoriju.
 - *SHA-256 bez soli i iteracija.* Prebrzo za napad grubom silom i iste lozinke daju isti heš.
+- *Ista greška za istekao i lažan token.* Jednostavnije, ali klijent tada ne može da kaže korisniku „prijava je istekla“, pa su kodovi odvojeni.
 
 ## 12. Spoljni servis iza porta
 

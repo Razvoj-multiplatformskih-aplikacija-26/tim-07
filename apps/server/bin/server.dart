@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:server/server.dart';
 
-/// Ulazna tačka: `dart run` u `apps/server` ili `/app/server` u Docker-u.
 Future<void> main() async {
   final ServerConfig config;
   try {
@@ -10,11 +9,10 @@ Future<void> main() async {
   } on ConfigException catch (error) {
     stderr.writeln(error);
     stderr.writeln('Kopiraj .env.example u .env (cp .env.example .env).');
-    exitCode = 78; // EX_CONFIG
+    exitCode = 78;
     return;
   }
 
-  // Server čeka bazu (Docker je podiže sporije) umesto da odmah padne.
   final database = await Database.connect(
     host: config.dbHost,
     port: config.dbPort,
@@ -25,7 +23,6 @@ Future<void> main() async {
   );
   stdout.writeln('Povezan sa bazom ${config.dbHost}:${config.dbPort}/${config.dbName}');
 
-  // Šema se pravi samo iz fajlova u repozitorijumu (T35).
   try {
     final migrations = await Migration.readDirectory(Directory(config.migrationsDirectory));
     await MigrationRunner(database, log: stdout.writeln).migrate(migrations);
@@ -37,7 +34,14 @@ Future<void> main() async {
   }
 
   final handler = buildHandler(
-    modules: [HealthRoutes(isDatabaseReady: database.ping)],
+    modules: [
+      HealthRoutes(isDatabaseReady: database.ping),
+      AuthRoutes(
+        credentials: MySqlCredentialStore(database),
+        users: MySqlUserRepository(database),
+        tokens: TokenService(secret: config.jwtSecret, ttl: config.tokenTtl),
+      ),
+    ],
     corsAllowedOrigins: config.corsAllowedOrigins,
   );
 
@@ -49,7 +53,6 @@ Future<void> main() async {
 
   stdout.writeln('Terenzo server sluša na http://${config.host}:${server.port}');
 
-  // Uredno gašenje na Ctrl+C i `docker stop`. Windows ne podržava SIGTERM.
   final signals = [
     ProcessSignal.sigint,
     if (!Platform.isWindows) ProcessSignal.sigterm,
