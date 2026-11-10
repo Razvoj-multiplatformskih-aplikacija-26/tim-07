@@ -15,3 +15,5 @@ build/
 # System files
 .DS_Store
 Thumbs.db
+# Server secrets (use apps/server/.env.example)
+.env
