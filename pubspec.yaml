@@ -9,4 +9,5 @@ workspace:
   - apps/backoffice
   - packages/domain
   - packages/blocs
+  - packages/contract
   - apps/server
