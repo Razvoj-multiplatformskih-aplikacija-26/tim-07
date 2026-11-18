@@ -1,8 +1,39 @@
+import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 
 abstract final class MobileDemoData {
-  static const currentUserId = UserId(1);
-  static const currentUserName = 'Marko Marković';
+  /// Lozinka svih demo naloga. Samo za demo: pravi nalozi su na serveru (KT2).
+  static const demoPassword = 'lozinka123';
+
+  /// Demo nalozi. Rezervacije ispod pripadaju korisnicima sa id 1 i 2.
+  /// Vlasnik služi da se vidi da mobilna aplikacija ne prima osoblje.
+  static final accounts = <FakeAccount>[
+    _account(1, 'Marko', 'Marković', 'marko.markovic@example.com', UserRole.user),
+    _account(2, 'Jelena', 'Nikolić', 'jelena.nikolic@example.com', UserRole.user),
+    _account(101, 'Petar', 'Vlasnik', 'petar.vlasnik@example.com', UserRole.owner),
+  ];
+
+  static FakeAccount _account(
+    int id,
+    String firstName,
+    String lastName,
+    String email,
+    UserRole role,
+  ) {
+    return FakeAccount(
+      password: demoPassword,
+      user: AppUser(
+        id: UserId(id),
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phoneNumber: '060000000$id',
+        dateOfBirth: DateTime(1995, 1, 1),
+        role: role,
+        createdAt: DateTime(2026, 1, 1),
+      ),
+    );
+  }
 
   static final fields = <SportsField>[
     _field(1, 'Arena Fudbal', 'Novi Beograd', SportType.football, 3500),

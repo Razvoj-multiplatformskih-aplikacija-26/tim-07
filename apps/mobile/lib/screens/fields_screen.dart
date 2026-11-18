@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/mobile_demo_data.dart';
 import '../text/reservation_texts.dart';
+import '../widgets/account_button.dart';
 import '../widgets/field_card.dart';
 
 class FieldsScreen extends StatefulWidget {
@@ -66,7 +67,10 @@ class _FieldsScreenState extends State<FieldsScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sportski tereni')),
+      appBar: AppBar(
+        title: const Text('Sportski tereni'),
+        actions: const [AccountButton()],
+      ),
       body: Column(
         children: [
           Padding(

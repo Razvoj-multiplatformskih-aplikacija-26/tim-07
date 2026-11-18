@@ -3,7 +3,7 @@ import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/mobile_demo_data.dart';
+import '../auth/current_user.dart';
 import '../data/mobile_fake_repository.dart';
 
 enum _SimulationAction { failNext, emptyNext, reload }
@@ -24,9 +24,10 @@ class SimulationMenu extends StatelessWidget {
         repository.returnEmptyOnNextRequest();
         _inform(context, 'Sledeće učitavanje će vratiti praznu listu.');
       case _SimulationAction.reload:
-        context.read<ReservationBloc>().add(
-              const UserReservationsRequested(MobileDemoData.currentUserId),
-            );
+        final user = context.readUser;
+        if (user != null) {
+          context.read<ReservationBloc>().add(UserReservationsRequested(user.id));
+        }
     }
   }
 

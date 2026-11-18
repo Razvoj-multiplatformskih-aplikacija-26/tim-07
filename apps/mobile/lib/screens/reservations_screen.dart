@@ -6,27 +6,35 @@ import 'package:go_router/go_router.dart';
 import 'package:messages/messages.dart';
 
 import '../actions/reservation_cancel.dart';
+import '../auth/current_user.dart';
 import '../data/mobile_demo_data.dart';
 import '../text/reservation_texts.dart';
+import '../widgets/account_button.dart';
 import '../widgets/simulation_menu.dart';
 
 class ReservationsScreen extends StatelessWidget {
   const ReservationsScreen({super.key});
 
   static void reload(BuildContext context) {
-    context.read<ReservationBloc>().add(
-      const UserReservationsRequested(MobileDemoData.currentUserId),
-    );
+    final user = context.readUser;
+    if (user == null) return;
+
+    context.read<ReservationBloc>().add(UserReservationsRequested(user.id));
   }
 
   @override
   Widget build(BuildContext context) {
+    // Bez korisnika (prijava je upravo istekla) router vodi na prijavu.
+    final user = context.watchUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Moje rezervacije'),
-        actions: const [SimulationMenu()],
+        actions: const [AccountButton(), SimulationMenu()],
       ),
-      body: BlocBuilder<ReservationBloc, ReservationState>(
+      body: user == null
+          ? const SizedBox.shrink()
+          : BlocBuilder<ReservationBloc, ReservationState>(
         builder: (context, state) {
           return switch (state) {
             ReservationInitial() ||
@@ -37,7 +45,8 @@ class ReservationsScreen extends StatelessWidget {
             ),
             ReservationEmpty() => _EmptyView(onReload: () => reload(context)),
             ReservationLoaded(:final reservations) => _ReservationsList(
-              reservations: _mine(reservations),
+              reservations: _mine(reservations, user.id),
+              userName: user.fullName,
             ),
           };
         },
@@ -45,10 +54,10 @@ class ReservationsScreen extends StatelessWidget {
     );
   }
 
-  static List<Reservation> _mine(List<Reservation> reservations) {
+  static List<Reservation> _mine(List<Reservation> reservations, UserId id) {
     return [
       for (final reservation in reservations)
-        if (reservation.userId == MobileDemoData.currentUserId) reservation,
+        if (reservation.userId == id) reservation,
     ]..sort((a, b) => b.startTime.compareTo(a.startTime));
   }
 }
@@ -138,8 +147,12 @@ class _EmptyView extends StatelessWidget {
 
 class _ReservationsList extends StatelessWidget {
   final List<Reservation> reservations;
+  final String userName;
 
-  const _ReservationsList({required this.reservations});
+  const _ReservationsList({
+    required this.reservations,
+    required this.userName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +163,7 @@ class _ReservationsList extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         itemCount: reservations.length,
         itemBuilder: (context, index) =>
-            _ReservationCard(reservation: reservations[index]),
+            _ReservationCard(reservation: reservations[index], userName: userName),
       ),
     );
   }
@@ -158,8 +171,12 @@ class _ReservationsList extends StatelessWidget {
 
 class _ReservationCard extends StatelessWidget {
   final Reservation reservation;
+  final String userName;
 
-  const _ReservationCard({required this.reservation});
+  const _ReservationCard({
+    required this.reservation,
+    required this.userName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -199,10 +216,7 @@ class _ReservationCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const _InfoRow(
-                icon: Icons.person_outline,
-                text: MobileDemoData.currentUserName,
-              ),
+              _InfoRow(icon: Icons.person_outline, text: userName),
               const SizedBox(height: 12),
               Text(
                 '${reservation.totalPrice} RSD',
