@@ -1,6 +1,7 @@
 
 import 'package:bloc/bloc.dart';
 import 'package:domain/domain.dart';
+import 'package:messages/messages.dart';
 
 import 'reservation_event.dart';
 import 'reservation_state.dart';
@@ -51,7 +52,7 @@ final class ReservationBloc
       }
     } catch (error) {
       // Svaka greska postaje stanje Error, pa aplikacija ne pada.
-      emit(ReservationError(error.toString()));
+      emit(ReservationError(describeError(error)));
     }
   }
 
@@ -169,7 +170,7 @@ final class ReservationBloc
       }
     } catch (error) {
       // Ako izmena ili ponovno ucitavanje pukne, ide Error i ucitavanje se preskace.
-      emit(ReservationError(error.toString()));
+      emit(ReservationError(describeError(error)));
     }
   }
 }

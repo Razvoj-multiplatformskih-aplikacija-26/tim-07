@@ -32,6 +32,8 @@ dependencies:
     path: ../../packages/domain
   blocs:
     path: ../../packages/blocs
+  messages:
+    path: ../../packages/messages
   flutter_bloc: ^9.1.1
   flutter:
     sdk: flutter

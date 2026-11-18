@@ -2,8 +2,8 @@ import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:messages/messages.dart';
 
-import '../text/reservation_texts.dart';
 
 /// Otkazivanje je nepovratno, pa traži potvrdu u dijalogu.
 /// Rok proverava pravilo iz paketa domain; ekran samo bira poruku.

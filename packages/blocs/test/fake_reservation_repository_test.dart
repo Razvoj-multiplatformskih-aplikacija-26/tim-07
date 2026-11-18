@@ -3,6 +3,10 @@ import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:test/test.dart';
 
+/// Pravilo domena koje je repozitorijum odbio, sa tačnom vrstom pravila.
+Matcher isRuleViolation<T extends ReservationValidationError>() =>
+    isA<ReservationRuleViolation>().having((e) => e.error, 'error', isA<T>());
+
 void main() {
   late FakeReservationRepository repository;
   late DateTime now;
@@ -101,7 +105,7 @@ void main() {
           startTime: DateTime(2026, 10, 18, 19),
           endTime: DateTime(2026, 10, 18, 21),
         ),
-        throwsStateError,
+        throwsA(isRuleViolation<SlotAlreadyTaken>()),
       );
     });
 
@@ -113,7 +117,7 @@ void main() {
           startTime: DateTime(2026, 10, 22, 6),
           endTime: DateTime(2026, 10, 22, 7),
         ),
-        throwsStateError,
+        throwsA(isRuleViolation<OutsideWorkingHours>()),
       );
     });
 

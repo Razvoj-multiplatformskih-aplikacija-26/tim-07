@@ -150,7 +150,7 @@ final class FakeReservationRepository implements ReservationRepository {
     final field = _findField(fieldId);
 
     if (!field.isActive) {
-      throw StateError('Teren trenutno nije aktivan.');
+      throw const ReservationRuleViolation(FieldUnavailable());
     }
 
     // Konacna provera termina nad svim rezervacijama (ovde repozitorijum glumi server).
@@ -166,7 +166,7 @@ final class FakeReservationRepository implements ReservationRepository {
     );
 
     if (slotError != null) {
-      throw StateError(slotError.message);
+      throw ReservationRuleViolation(slotError);
     }
 
     // Cenu racuna domen, proporcionalno trajanju termina.
@@ -212,7 +212,7 @@ final class FakeReservationRepository implements ReservationRepository {
       reservation.status,
       status,
     )) {
-      throw StateError('Promena statusa nije dozvoljena.');
+      throw const ReservationRuleViolation(InvalidReservationStatus());
     }
 
     // Rucno potvrdjivanje mora biti pre roka od 5 sati.
@@ -229,7 +229,7 @@ final class FakeReservationRepository implements ReservationRepository {
       );
 
       if (error != null) {
-        throw StateError(error.message);
+        throw ReservationRuleViolation(error);
       }
     }
 
@@ -265,7 +265,7 @@ final class FakeReservationRepository implements ReservationRepository {
     );
 
     if (error != null) {
-      throw StateError(error.message);
+      throw ReservationRuleViolation(error);
     }
 
     // Upisuje vreme dolaska; status ostaje confirmed, a completed dolazi kasnije automatski.
