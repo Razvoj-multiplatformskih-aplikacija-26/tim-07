@@ -12,12 +12,12 @@ dependencies:
     path: ../domain
   messages:
     path: ../messages
+  contract:
+    path: ../contract
   bloc: ^9.1.0
   equatable: ^2.0.7
 
 dev_dependencies:
-  contract:
-    path: ../contract
   mapping:
     path: ../mapping
   lints: ^6.0.0

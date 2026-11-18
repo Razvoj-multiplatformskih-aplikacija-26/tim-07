@@ -5,25 +5,18 @@ import 'package:messages/messages.dart';
 
 import 'api_client.dart';
 
-/// Prijavljen korisnik i do kada prijava važi.
-final class UserSession {
-  final AppUser user;
-  final DateTime expiresAt;
-
-  const UserSession({required this.user, required this.expiresAt});
-}
-
 /// Prijava, vraćanje prijave i odjava.
 ///
 /// Token čuva [SessionStore] iza porta; lozinka se nikad ne čuva. Odjava ne
 /// zove server: token se ne čuva na serveru, pa ga klijent samo briše (odluka 11).
-final class HttpSessionRepository {
+final class HttpSessionRepository implements AuthRepository {
   const HttpSessionRepository(this._api);
 
   final ApiClient _api;
 
   /// Pogrešna lozinka stiže kao `ServerRejectedException` sa kodom
   /// `invalid_credentials`; poruku pravi `describeError`.
+  @override
   Future<UserSession> logIn({
     required String email,
     required String password,
@@ -50,6 +43,7 @@ final class HttpSessionRepository {
   /// `null` kada nema sačuvane prijave ili je istekla (token se tada briše).
   /// Kada servera nema, baca `ServerUnreachableException` i **ne** briše token:
   /// korisnik ne sme da ostane odjavljen samo zato što je mreža pala.
+  @override
   Future<UserSession?> restore() async {
     if (await _api.session.read() == null) return null;
 
@@ -70,8 +64,10 @@ final class HttpSessionRepository {
     }
   }
 
+  @override
   Future<void> logOut() => _api.session.clear();
 
   /// Javlja kada server kaže da prijava više ne važi.
+  @override
   Stream<void> get expirations => _api.expirations;
 }

@@ -14,6 +14,17 @@ const serverUnreachableMessage = 'Server trenutno nije dostupan.';
 /// Prijava je istekla (`token_expired`); aplikacija vraća korisnika na prijavu.
 const sessionExpiredMessage = 'Prijava je istekla. Prijavite se ponovo.';
 
+/// Prijava bez e-pošte ili lozinke; server se ne zove.
+const credentialsRequiredMessage = 'Unesite e-mail i lozinku.';
+
+/// Korisnik se prijavio u aplikaciju koja nije za njegovu ulogu (T45: `canSignIn`).
+String signInNotAllowedMessage(ClientApp app) => switch (app) {
+  ClientApp.mobile =>
+      'Ova aplikacija je za korisnike. Osoblje se prijavljuje u backoffice.',
+  ClientApp.backoffice =>
+      'Backoffice je za vlasnike i administratore sportskih objekata.',
+};
+
 /// Broj sati sa ispravnim oblikom reči: 1 sat, 2 sata, 5 sati, 21 sat, 11 sati.
 String hoursLabel(int hours) {
   final lastTwo = hours.abs() % 100;

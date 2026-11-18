@@ -3,3 +3,7 @@ export 'src/reservations/reservation_state.dart';
 export 'src/reservations/reservation_bloc.dart';
 export 'src/repositories/fake_reservation_repository.dart';
 export 'src/repositories/demo_data.dart';
+export 'src/auth/auth_bloc.dart';
+export 'src/auth/auth_event.dart';
+export 'src/auth/auth_state.dart';
+export 'src/repositories/fake_auth_repository.dart';
