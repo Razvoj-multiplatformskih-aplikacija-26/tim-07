@@ -60,13 +60,20 @@ final class Reservation {
       status == ReservationStatus.pending ||
           status == ReservationStatus.confirmed;
 
+  /// Koliko sati pre početka se otvara check-in prozor.
+  static const checkInOpensHoursBefore = 24;
+
+  /// Koliko sati pre početka se zatvara check-in prozor. Isto je i rok za
+  /// otkazivanje i za potvrdu rezervacije od strane vlasnika.
+  static const checkInClosesHoursBefore = 5;
+
   /// Vreme otvaranja check-in prozora.
   DateTime get checkInOpensAt =>
-      startTime.subtract(const Duration(hours: 24));
+      startTime.subtract(const Duration(hours: checkInOpensHoursBefore));
 
   /// Poslednji dozvoljeni trenutak za check-in.
   DateTime get checkInDeadline =>
-      startTime.subtract(const Duration(hours: 5));
+      startTime.subtract(const Duration(hours: checkInClosesHoursBefore));
 
   /// Da li je korisnik već potvrdio dolazak.
   bool get isCheckedIn => checkedInAt != null;
