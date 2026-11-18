@@ -153,7 +153,7 @@ Sve ostalo traži `Authorization: Bearer <token>`. Bez tokena odgovor je `401` s
 
 `completed` i `cancelled` su konačna stanja: niko ih ne menja. Korisnik nikad ne potvrđuje ni odbija. Vlasnik ne dira rezervacije ni terene drugog vlasnika. Zabranjena akcija daje `403` sa kodom `forbidden`.
 
-Prava se pišu **jednom**, u `domain` (`canConfirmReservation`, `canCancelReservation(user, reservation, field)`, `canManageField(user, field)` …). Klijenti ih koriste da sakriju dugmad, a server da odbije poziv.
+Prava se pišu **jednom**, u `domain` (`canConfirmReservation`, `canCancelReservation(user, reservation, field)`, `canManageField(user, field)` …). Klijenti ih koriste da sakriju dugmad, a server da odbije poziv. Funkcije su u `packages/domain/lib/src/rules/permissions.dart` (T45): `canCreateReservation`, `canViewReservation`, `canConfirmReservation`, `canRejectReservation`, `canCancelReservation`, `canCheckInReservation`, `allowedReservationActions` (za dugmad), `canViewField`, `canCreateField`, `canManageField`, `canReviewField`, `canViewStatistics`, `canManageUsers` i `canSignIn(uloga, aplikacija)`. Odgovor „ne“: korisnik koji traži tuđu rezervaciju (`canViewReservation` je false) dobija 404, zabranjena akcija nad zapisom koji sme da vidi dobija 403. Test u `domain` pada ako server ili aplikacija sami porede ulogu.
 
 **Odbačeno.** *Provere uloga u svakom ekranu i u svakoj ruti servera posebno.* Pravila bi se razišla, pa bi aplikacija nudila akciju koju server odbija (ili obrnuto).
 
