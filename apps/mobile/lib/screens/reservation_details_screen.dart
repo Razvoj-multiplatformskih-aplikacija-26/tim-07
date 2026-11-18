@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:messages/messages.dart';
 
 import '../actions/reservation_cancel.dart';
+import '../auth/current_user.dart';
 import '../data/mobile_demo_data.dart';
 import '../text/reservation_texts.dart';
 import 'message_screen.dart';
@@ -18,13 +19,18 @@ class ReservationDetailsScreen extends StatelessWidget {
   static const title = 'Detalji rezervacije';
 
   void _reload(BuildContext context) {
-    context.read<ReservationBloc>().add(
-      const UserReservationsRequested(MobileDemoData.currentUserId),
-    );
+    final user = context.readUser;
+    if (user == null) return;
+
+    context.read<ReservationBloc>().add(UserReservationsRequested(user.id));
   }
 
   @override
   Widget build(BuildContext context) {
+    // Bez korisnika (prijava je upravo istekla) router vodi na prijavu.
+    final user = context.watchUser;
+    if (user == null) return const SizedBox.shrink();
+
     return BlocBuilder<ReservationBloc, ReservationState>(
       builder: (context, state) {
         return switch (state) {
@@ -56,17 +62,22 @@ class ReservationDetailsScreen extends StatelessWidget {
           ReservationLoaded(:final reservations) => _body(
             context,
             reservations,
+            user,
           ),
         };
       },
     );
   }
 
-  Widget _body(BuildContext context, List<Reservation> reservations) {
+  Widget _body(
+    BuildContext context,
+    List<Reservation> reservations,
+    AppUser user,
+  ) {
     Reservation? reservation;
     for (final candidate in reservations) {
       if (candidate.id == reservationId &&
-          candidate.userId == MobileDemoData.currentUserId) {
+          candidate.userId == user.id) {
         reservation = candidate;
       }
     }
@@ -121,7 +132,7 @@ class ReservationDetailsScreen extends StatelessWidget {
           _DetailRow(
             icon: Icons.person_outline,
             label: 'Korisnik',
-            value: MobileDemoData.currentUserName,
+            value: user.fullName,
           ),
           _DetailRow(
             icon: Icons.payments_outlined,

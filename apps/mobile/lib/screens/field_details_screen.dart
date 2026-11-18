@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../data/mobile_demo_data.dart';
+import '../auth/current_user.dart';
 import '../text/reservation_texts.dart';
 
 class FieldDetailsScreen extends StatefulWidget {
@@ -70,6 +70,8 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
   bool isSlotAvailable(int index, List<Reservation> reservations) {
     final slot = slotTimes(times[index]);
+    // Bez prijave se ne zna koje termine korisnik već ima.
+    final userId = context.readUser?.id;
 
     final isFree =
         validateReservationTime(
@@ -78,13 +80,14 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
               now: DateTime.now(),
             ) ==
             null &&
-        !hasReservationOverlap(
-          fieldId: widget.field.id,
-          userId: MobileDemoData.currentUserId,
+        (userId == null ||
+            !hasReservationOverlap(
+              fieldId: widget.field.id,
+              userId: userId,
           startTime: slot.start,
           endTime: slot.end,
-          existingReservations: reservations,
-        );
+              existingReservations: reservations,
+            ));
 
     if (!isFree) {
       return false;

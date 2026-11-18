@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:messages/messages.dart';
 
+import '../auth/current_user.dart';
 import '../data/mobile_demo_data.dart';
 import '../text/reservation_texts.dart';
 
@@ -34,8 +35,8 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     text: widget.initialStart,
   );
   late final _endController = TextEditingController(text: widget.initialEnd);
-  final _nameController = TextEditingController(
-    text: MobileDemoData.currentUserName,
+  late final _nameController = TextEditingController(
+    text: context.readUser?.fullName ?? '',
   );
 
   bool _submitting = false;
@@ -80,6 +81,11 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
       return null;
     }
 
+    final user = context.readUser;
+    if (user == null) {
+      return null;
+    }
+
     final state = context.read<ReservationBloc>().state;
     final known = state is ReservationLoaded
         ? state.reservations
@@ -87,7 +93,7 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
 
     final error = validateReservationSlot(
       fieldId: widget.field.id,
-      userId: MobileDemoData.currentUserId,
+      userId: user.id,
       startTime: start,
       endTime: end,
       now: DateTime.now(),
@@ -123,7 +129,8 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
   }
 
   void confirmReservation() {
-    if (_submitting || !_formKey.currentState!.validate()) {
+    final user = context.readUser;
+    if (user == null || _submitting || !_formKey.currentState!.validate()) {
       return;
     }
 
@@ -132,7 +139,7 @@ class _ReservationFormScreenState extends State<ReservationFormScreen> {
     context.read<ReservationBloc>().add(
       ReservationCreateRequested(
         fieldId: widget.field.id,
-        userId: MobileDemoData.currentUserId,
+        userId: user.id,
         startTime: _parseTime(_startController.text)!,
         endTime: _parseTime(_endController.text)!,
       ),

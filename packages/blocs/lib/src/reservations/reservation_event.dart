@@ -87,3 +87,8 @@ final class ReservationCheckInRequested extends ReservationEvent {
   @override
   List<Object?> get props => [reservationId];
 }
+
+/// Briše učitane rezervacije (npr. pri odjavi), da sledeći korisnik ne vidi tuđe.
+final class ReservationsCleared extends ReservationEvent {
+  const ReservationsCleared();
+}

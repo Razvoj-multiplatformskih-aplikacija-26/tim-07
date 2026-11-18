@@ -15,6 +15,8 @@ final class ReservationBloc
   final ReservationRepository repository;
   // Zapamceni "recept" poslednjeg ucitavanja, da se posle akcije osvezi isti pregled.
   Future<List<Reservation>> Function()? _lastQuery;
+  // Raste pri svakom brisanju: odgovor koji stigne posle toga je tuđ i odbacuje se.
+  int _generation = 0;
 
   // Prosledjuje pocetno stanje roditeljskom Bloc-u i registruje obradu dogadjaja.
   ReservationBloc({required this.repository})
@@ -27,6 +29,7 @@ final class ReservationBloc
     on<ReservationConfirmRequested>(_onReservationConfirmRequested);
     on<ReservationCancelRequested>(_onReservationCancelRequested);
     on<ReservationCheckInRequested>(_onReservationCheckInRequested);
+    on<ReservationsCleared>(_onReservationsCleared);
   }
 
   // Zajednicko ucitavanje: Loading, pa Loaded ili Empty, a greska postaje Error.
@@ -38,11 +41,13 @@ final class ReservationBloc
     // Pamti upit da ga _performAction moze ponoviti posle izmene.
     _lastQuery = fetch;
     // Ekran odmah prikaze spinner dok se ceka odgovor.
+    final generation = _generation;
     emit(const ReservationLoading());
 
     try {
       // Pokrece upit i ceka rezultat; ako baci gresku, izvrsavanje ide u catch.
       final reservations = await fetch();
+      if (generation != _generation) return;
 
       // Prazna lista je poseban prikaz (Empty), a ne Loaded sa nula elemenata.
       if (reservations.isEmpty) {
@@ -51,6 +56,7 @@ final class ReservationBloc
         emit(ReservationLoaded(reservations));
       }
     } catch (error) {
+      if (generation != _generation) return;
       // Svaka greska postaje stanje Error, pa aplikacija ne pada.
       emit(ReservationError(describeError(error)));
     }
@@ -146,12 +152,23 @@ final class ReservationBloc
     );
   }
 
+  // Dogadjaj: zaboravi ucitane rezervacije (odjava).
+  void _onReservationsCleared(
+    ReservationsCleared event,
+    Emitter<ReservationState> emit,
+  ) {
+    _generation++;
+    _lastQuery = null;
+    emit(const ReservationInitial());
+  }
+
   // Zajednicka akcija koja menja podatke: Loading, izvrsi, ponovo ucitaj, prikazi rezultat.
   Future<void> _performAction(
       Emitter<ReservationState> emit,
       // Funkcija koja izvrsava jednu izmenu i vraca izmenjenu rezervaciju.
       Future<Reservation> Function() action,
       ) async {
+    final generation = _generation;
     // Ekran prikaze spinner dok izmena traje.
     emit(const ReservationLoading());
 
@@ -162,6 +179,7 @@ final class ReservationBloc
       // Ponavlja poslednji upit da korisnik vidi isti pregled kao pre izmene.
       final reload = _lastQuery ?? repository.getReservations;
       final reservations = await reload();
+      if (generation != _generation) return;
 
       if (reservations.isEmpty) {
         emit(const ReservationEmpty());
@@ -169,6 +187,7 @@ final class ReservationBloc
         emit(ReservationLoaded(reservations));
       }
     } catch (error) {
+      if (generation != _generation) return;
       // Ako izmena ili ponovno ucitavanje pukne, ide Error i ucitavanje se preskace.
       emit(ReservationError(describeError(error)));
     }

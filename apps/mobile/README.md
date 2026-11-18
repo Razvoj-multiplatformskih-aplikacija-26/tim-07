@@ -1,17 +1,44 @@
 # mobile
 
-A new Flutter project.
+Mobilna aplikacija za korisnike (Flutter, Android i iOS). Pregled terena, rezervisanje i moje rezervacije.
 
-## Getting Started
+```sh
+flutter pub get          # u korenu repozitorijuma (pub workspace)
+cd apps/mobile && flutter run
+flutter test
+```
 
-This project is a starting point for a Flutter application.
+## Prijava
 
-A few resources to get you started if this is your first Flutter project:
+Katalog terena (`/`, `/fields`, `/fields/:id`) je javan. Rezervisanje i moje rezervacije traže prijavu:
+bez nje router vodi na `/login?from=<adresa>`, a posle prijave nazad na tu adresu.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Prijavu vodi zajednički `AuthBloc` (`packages/blocs`) nad `AuthRepository`. Dok aplikacija nema server (T52), iza njega je
+  `FakeAuthRepository` sa demo nalozima (`MobileDemoData.accounts`); sa serverom ga menja `HttpSessionRepository`.
+- Prijavljen korisnik se čita iz `AuthBloc`-a (`context.watchUser` / `context.readUser`), nigde iz demo podataka.
+- Mobilna aplikacija prima samo korisnike (`canSignIn` iz domena): vlasnik se odbija uz poruku, a prijava se ne pamti.
+- Istek prijave: na zaštićenom ekranu aplikacija vraća na prijavu uz poruku „Prijava je istekla. Prijavite se ponovo.“,
+  a na javnom ekranu ostaje gde jeste i obaveštava u traci. Posle nove prijave se vraća na isti ekran.
+- Odjava je u meniju naloga (ikona u traci aplikacije); briše prijavu i rezervacije učitane za tog korisnika.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Demo nalozi
+
+Lozinka svih demo naloga je `lozinka123`.
+
+| E-mail | Uloga | Napomena |
+| ------ | ----- | -------- |
+| `marko.markovic@example.com` | korisnik | ima rezervacije u svim stanjima |
+| `jelena.nikolic@example.com` | korisnik | druge rezervacije, ne vidi Markove |
+| `petar.vlasnik@example.com` | vlasnik | mobilna aplikacija ga odbija (za backoffice je) |
+
+## Adrese
+
+| Adresa | Ekran | Prijava |
+| ------ | ----- | ------- |
+| `/` | početna | ne |
+| `/fields` | katalog terena | ne |
+| `/fields/:fieldId` | detalj terena | ne |
+| `/fields/:fieldId/reserve?date=&start=&end=` | forma za rezervaciju | da |
+| `/reservations` | moje rezervacije | da |
+| `/reservations/:reservationId` | detalj rezervacije | da |
+| `/login?from=` | prijava | |

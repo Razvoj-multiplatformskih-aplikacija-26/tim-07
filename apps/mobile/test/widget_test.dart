@@ -1,11 +1,11 @@
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/data/mobile_auth.dart';
 import 'package:mobile/data/mobile_demo_data.dart';
 import 'package:mobile/data/mobile_fake_repository.dart';
 import 'package:mobile/data/mobile_repository.dart';
 import 'package:mobile/main.dart';
-import 'package:mobile/navigation/app_router.dart';
 
 void main() {
   Future<void> openLocation(
@@ -17,8 +17,20 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(MyApp(repository: repository));
-    AppRouter.router.go(location);
+    // Prijavljen korisnik, kao posle prijave i ponovnog pokretanja aplikacije.
+    final auth = createMobileAuthRepository(delay: Duration.zero);
+    await auth.logIn(
+      email: MobileDemoData.accounts.first.user.email,
+      password: MobileDemoData.demoPassword,
+    );
+
+    await tester.pumpWidget(
+      MyApp(
+        repository: repository,
+        authRepository: auth,
+        initialLocation: location,
+      ),
+    );
   }
 
   Future<void> openReservations(
@@ -44,7 +56,7 @@ void main() {
   test('Demo podaci imaju bar deset rezervacija korisnika u svim stanjima',
       () {
     final mine = MobileDemoData.createReservations()
-        .where((r) => r.userId == MobileDemoData.currentUserId)
+        .where((r) => r.userId == MobileDemoData.accounts.first.user.id)
         .toList();
 
     expect(mine.length, greaterThanOrEqualTo(10));
@@ -238,7 +250,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final mine = await repository.getReservationsByUser(
-      MobileDemoData.currentUserId,
+      MobileDemoData.accounts.first.user.id,
     );
     expect(mine.length, 11);
   });
