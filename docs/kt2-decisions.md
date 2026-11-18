@@ -180,6 +180,7 @@ Mobilna i desktop aplikacija ne podležu CORS-u, ali dobijaju ista zaglavlja.
 - Identitet se uzima **samo iz tokena**. Polje `userId` u telu zahteva se ignoriše.
 - Pogrešna lozinka i nepostojeći e-mail daju istu grešku (`invalid_credentials`) i traju isto (i za nepostojeći nalog proverava se heš), da se ne otkrije koji nalozi postoje.
 - Odjava ne treba poziv servera: token se ne čuva na serveru, pa ga klijent briše iz skladišta, a server ga odbija kada istekne.
+- Token se čuva iza porta `SessionStore` (T49, `packages/session_storage`): u bezbednom skladištu platforme (Keystore, Keychain, Credential Manager, libsecret), a na vebu u `localStorage`, jer mora da preživi osvežavanje stranice. To je slabije od skladišta platforme (skripta sa iste adrese ga može pročitati), pa token ističe i na serveru. Lozinka se na uređaju ne čuva. **Odbačeno:** `sessionStorage` (nestaje sa zatvaranjem taba) i kolačić (CSRF i `Access-Control-Allow-Credentials`).
 
 **Odbačeno.**
 - *Sesije u bazi (nasumičan id u tabeli).* Lako se poništavaju, ali svaki poziv čita bazu. JWT je dovoljan za KT2, a poništavanje se ostvaruje kratkim trajanjem.
