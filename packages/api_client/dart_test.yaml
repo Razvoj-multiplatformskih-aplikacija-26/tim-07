@@ -1,0 +1,2 @@
+# Isti testovi rade na VM-u i u pregledaču: klijent ne sme da zavisi od dart:io.
+platforms: [vm, chrome]
