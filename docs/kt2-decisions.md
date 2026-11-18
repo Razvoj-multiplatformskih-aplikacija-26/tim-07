@@ -224,7 +224,7 @@ Server nikad ne šalje gotovu poruku za korisnika, već **kod i podatke**:
 | 422 | `invalid_duration` | `InvalidReservationDuration` |
 | 500 | `internal` | neočekivana greška (detalji samo u logu servera) |
 
-Poruku na srpskom pravi klijent iz koda, istom funkcijom kao kada pravilo proveri lokalno. Nepoznat kod daje opštu poruku („Došlo je do greške. Pokušajte ponovo.“). Konkretan oblik DTO-a definiše `packages/contract` (T40), a prevod `packages/mapping` (T41). Poruke na srpskom pravi `packages/messages` (T42): jedna funkcija `errorMessage(ErrorDto)` koju koristi i lokalna provera pravila (`validationMessage`) i greška sa servera, pa korisnik vidi istu poruku. Broj sati u poruci dolazi iz `details`, ne iz aplikacije, pa server koji promeni rok menja poruku bez nove verzije aplikacije.
+Poruku na srpskom pravi klijent iz koda, istom funkcijom kao kada pravilo proveri lokalno. Nepoznat kod daje opštu poruku („Došlo je do greške. Pokušajte ponovo.“). Konkretan oblik DTO-a definiše `packages/contract` (T40), a prevod `packages/mapping` (T41). Poruke na srpskom pravi `packages/messages` (T42): jedna funkcija `errorMessage(ErrorDto)` koju koristi i lokalna provera pravila (`validationMessage`) i greška sa servera, pa korisnik vidi istu poruku. Broj sati u poruci dolazi iz `details`, ne iz aplikacije, pa server koji promeni rok menja poruku bez nove verzije aplikacije. HTTP repozitorijume pišu `packages/api_client` (T43): isti kod na VM-u i u pregledaču, sve greške stižu kao `ServerRejectedException` ili `ServerUnreachableException`.
 
 ## 14. Statistika zauzetosti
 

@@ -12,4 +12,5 @@ workspace:
   - packages/contract
   - packages/mapping
   - packages/messages
+  - packages/api_client
   - apps/server
