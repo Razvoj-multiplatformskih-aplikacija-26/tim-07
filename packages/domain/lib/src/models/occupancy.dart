@@ -9,6 +9,12 @@ final class StatsPeriod {
 
   const StatsPeriod._(this.kind, this.from, this.to);
 
+  /// Period sa tačnim granicama koje je server već izračunao (npr. iz odgovora).
+  ///
+  /// Za razliku od `weekOf`/`monthOf` ne računa ništa po lokalnoj zoni uređaja,
+  /// pa klijent u drugoj vremenskoj zoni prikazuje isti period kao server.
+  const StatsPeriod.exact(this.kind, this.from, this.to);
+
   factory StatsPeriod.weekOf(DateTime day) {
     final local = day.toLocal();
     final monday = DateTime(local.year, local.month, local.day - (local.weekday - DateTime.monday));

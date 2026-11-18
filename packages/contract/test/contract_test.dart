@@ -407,6 +407,41 @@ void main() {
     });
   });
 
+  group('HTTP status po kodu greške', () {
+    test('prati tabelu iz odluke 13', () {
+      expect(httpStatusFor(ErrorCodes.slotTaken), 409);
+      expect(httpStatusFor(ErrorCodes.cancellationDeadlineExpired), 422);
+      expect(httpStatusFor(ErrorCodes.tokenExpired), 401);
+      expect(httpStatusFor(ErrorCodes.forbidden), 403);
+      expect(httpStatusFor(ErrorCodes.notFound), 404);
+      expect(httpStatusFor('kod_koji_ne_postoji'), 500);
+    });
+
+    test('svaki poznat kod ima status različit od podrazumevanog 500', () {
+      const codes = [
+        ErrorCodes.badRequest,
+        ErrorCodes.unauthenticated,
+        ErrorCodes.invalidToken,
+        ErrorCodes.invalidCredentials,
+        ErrorCodes.forbidden,
+        ErrorCodes.notFound,
+        ErrorCodes.slotTaken,
+        ErrorCodes.invalidStatusTransition,
+        ErrorCodes.invalidApprovalTransition,
+        ErrorCodes.invalidTimeRange,
+        ErrorCodes.reservationInPast,
+        ErrorCodes.outsideWorkingHours,
+        ErrorCodes.fieldBlocked,
+        ErrorCodes.fieldUnavailable,
+        ErrorCodes.checkInNotAllowed,
+        ErrorCodes.invalidDuration,
+      ];
+      for (final code in codes) {
+        expect(httpStatusFor(code), isNot(500), reason: code);
+      }
+    });
+  });
+
   group('adrese', () {
     test('odgovaraju odlukama 8 i 9', () {
       expect(ApiPaths.login, '/auth/login');

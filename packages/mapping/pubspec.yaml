@@ -1,0 +1,16 @@
+name: mapping
+description: "Terenzo mapping between the domain and the HTTP contract, in one place for the clients and the server."
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  contract: any
+  domain: any
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6
+resolution: workspace

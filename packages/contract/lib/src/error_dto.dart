@@ -39,6 +39,32 @@ abstract final class ErrorCodes {
   static const internal = 'internal';
 }
 
+/// HTTP status za kod greške (tabela u odluci 13). Nepoznat kod je 500.
+///
+/// Na jednom mestu da server i klijent ne drže svaki svoju tabelu.
+int httpStatusFor(String code) => switch (code) {
+  ErrorCodes.badRequest => 400,
+  ErrorCodes.payloadTooLarge => 413,
+  ErrorCodes.unauthenticated ||
+  ErrorCodes.invalidToken ||
+  ErrorCodes.tokenExpired ||
+  ErrorCodes.invalidCredentials => 401,
+  ErrorCodes.forbidden => 403,
+  ErrorCodes.notFound => 404,
+  ErrorCodes.slotTaken ||
+  ErrorCodes.invalidStatusTransition ||
+  ErrorCodes.invalidApprovalTransition => 409,
+  ErrorCodes.invalidTimeRange ||
+  ErrorCodes.reservationInPast ||
+  ErrorCodes.outsideWorkingHours ||
+  ErrorCodes.fieldBlocked ||
+  ErrorCodes.fieldUnavailable ||
+  ErrorCodes.cancellationDeadlineExpired ||
+  ErrorCodes.checkInNotAllowed ||
+  ErrorCodes.invalidDuration => 422,
+  _ => 500,
+};
+
 /// Imena podataka koje greška može da nosi u `details`.
 abstract final class ErrorDetailKeys {
   /// `cancellation_deadline_expired`: koliko sati pre početka je rok.
@@ -51,6 +77,10 @@ abstract final class ErrorDetailKeys {
   /// `bad_request`: ime polja ili razlog.
   static const fields = 'fields';
   static const reason = 'reason';
+
+  /// `invalid_approval_transition`: stanje odobrenosti pre i posle.
+  static const from = 'from';
+  static const to = 'to';
 }
 
 /// Greška koju server vraća: `{"error": {"code": "...", "details": {...}}}`.
