@@ -255,6 +255,23 @@ void main() {
     });
   });
 
+  group('prijava u pogrešnu aplikaciju', () {
+    test('svaka aplikacija kaže za koga je', () {
+      expect(
+        signInNotAllowedMessage(ClientApp.backoffice),
+        'Backoffice je za vlasnike i administratore sportskih objekata.',
+      );
+      expect(
+        signInNotAllowedMessage(ClientApp.mobile),
+        'Ova aplikacija je za korisnike. Osoblje se prijavljuje u backoffice.',
+      );
+    });
+
+    test('prazna polja imaju poruku', () {
+      expect(credentialsRequiredMessage, 'Unesite e-mail i lozinku.');
+    });
+  });
+
   group('istek prijave', () {
     test('prepoznaje token_expired i ništa drugo', () {
       expect(

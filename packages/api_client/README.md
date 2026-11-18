@@ -11,7 +11,7 @@ Koristi samo `package:http`, bez `dart:io` (proverava `test/purity_test.dart`), 
 | `HttpFieldRepository` | `SportsFieldRepository` | tereni, katalog sa filterima, `getAvailableSports()` |
 | `HttpScheduleRepository` | `FieldScheduleRepository` | radno vreme i blokirani periodi |
 | `HttpStatisticsRepository` | `StatisticsRepository` | zauzetost (računa server) |
-| `HttpSessionRepository` | | prijava, vraćanje prijave posle restarta, odjava |
+| `HttpSessionRepository` | `AuthRepository` | prijava, vraćanje prijave posle restarta, odjava |
 | `SessionStore`, `MemorySessionStore` | | port za čuvanje tokena (implementacije platformi: T49) |
 
 ## Greške

@@ -37,6 +37,7 @@ export 'src/rules/reservation_price.dart';
 
 // T09 — Repository port za rezervacije.
 export 'src/repositories/reservation_repository.dart';
+export 'src/repositories/auth_repository.dart';
 
 export 'src/repositories/sports_field_repository.dart';
 export 'src/repositories/field_schedule_repository.dart';
