@@ -1,4 +1,3 @@
-
 import 'package:domain/domain.dart';
 import 'package:equatable/equatable.dart';
 

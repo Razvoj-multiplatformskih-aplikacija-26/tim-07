@@ -1,4 +1,3 @@
-
 import 'package:domain/domain.dart';
 
 /// Demo podaci za testiranje Terenzo aplikacije.
@@ -67,18 +66,10 @@ abstract final class DemoData {
     final current = now ?? DateTime.now();
 
     // Sutrasnji datum.
-    final tomorrow = DateTime(
-      current.year,
-      current.month,
-      current.day + 1,
-    );
+    final tomorrow = DateTime(current.year, current.month, current.day + 1);
 
     // Datum za tri dana.
-    final inThreeDays = DateTime(
-      current.year,
-      current.month,
-      current.day + 3,
-    );
+    final inThreeDays = DateTime(current.year, current.month, current.day + 3);
 
     return [
       Reservation(

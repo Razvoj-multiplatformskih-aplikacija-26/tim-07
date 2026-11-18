@@ -37,6 +37,30 @@ abstract final class ErrorCodes {
 
   // 500
   static const internal = 'internal';
+
+  /// Svi kodovi koje ova verzija ugovora poznaje.
+  static const all = <String>[
+    badRequest,
+    payloadTooLarge,
+    unauthenticated,
+    invalidToken,
+    tokenExpired,
+    invalidCredentials,
+    forbidden,
+    notFound,
+    slotTaken,
+    invalidStatusTransition,
+    invalidApprovalTransition,
+    invalidTimeRange,
+    reservationInPast,
+    outsideWorkingHours,
+    fieldBlocked,
+    fieldUnavailable,
+    cancellationDeadlineExpired,
+    checkInNotAllowed,
+    invalidDuration,
+    internal,
+  ];
 }
 
 /// HTTP status za kod greške (tabela u odluci 13). Nepoznat kod je 500.
@@ -113,26 +137,5 @@ final class ErrorDto {
     );
   }
 
-  static final Set<String> _known = {
-    ErrorCodes.badRequest,
-    ErrorCodes.payloadTooLarge,
-    ErrorCodes.unauthenticated,
-    ErrorCodes.invalidToken,
-    ErrorCodes.tokenExpired,
-    ErrorCodes.invalidCredentials,
-    ErrorCodes.forbidden,
-    ErrorCodes.notFound,
-    ErrorCodes.slotTaken,
-    ErrorCodes.invalidStatusTransition,
-    ErrorCodes.invalidApprovalTransition,
-    ErrorCodes.invalidTimeRange,
-    ErrorCodes.reservationInPast,
-    ErrorCodes.outsideWorkingHours,
-    ErrorCodes.fieldBlocked,
-    ErrorCodes.fieldUnavailable,
-    ErrorCodes.cancellationDeadlineExpired,
-    ErrorCodes.checkInNotAllowed,
-    ErrorCodes.invalidDuration,
-    ErrorCodes.internal,
-  };
+  static final Set<String> _known = ErrorCodes.all.toSet();
 }

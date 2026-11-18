@@ -1,4 +1,3 @@
-
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:test/test.dart';
@@ -38,7 +37,7 @@ void main() {
         emitsInOrder([
           isA<ReservationLoading>(),
           isA<ReservationLoaded>().having(
-                (state) => state.reservations.length,
+            (state) => state.reservations.length,
             'broj rezervacija',
             3,
           ),
@@ -58,7 +57,7 @@ void main() {
         emitsInOrder([
           isA<ReservationLoading>(),
           isA<ReservationLoaded>().having(
-                (state) => state.reservations.length,
+            (state) => state.reservations.length,
             'broj rezervacija korisnika',
             2,
           ),
@@ -78,7 +77,7 @@ void main() {
         emitsInOrder([
           isA<ReservationLoading>(),
           isA<ReservationLoaded>().having(
-                (state) => state.reservations.length,
+            (state) => state.reservations.length,
             'broj rezervacija terena',
             1,
           ),
@@ -95,10 +94,7 @@ void main() {
 
       await expectLater(
         bloc.stream,
-        emitsInOrder([
-          isA<ReservationLoading>(),
-          isA<ReservationEmpty>(),
-        ]),
+        emitsInOrder([isA<ReservationLoading>(), isA<ReservationEmpty>()]),
       );
 
       await bloc.close();
@@ -123,7 +119,7 @@ void main() {
         emitsInOrder([
           isA<ReservationLoading>(),
           isA<ReservationLoaded>().having(
-                (state) => state.reservations.length,
+            (state) => state.reservations.length,
             'broj rezervacija posle kreiranja',
             4,
           ),
@@ -136,18 +132,16 @@ void main() {
     test('otkazuje rezervaciju', () async {
       final bloc = ReservationBloc(repository: repository);
 
-      bloc.add(
-        ReservationCancelRequested(ReservationId(2)),
-      );
+      bloc.add(ReservationCancelRequested(ReservationId(2)));
 
       await expectLater(
         bloc.stream,
         emitsInOrder([
           isA<ReservationLoading>(),
           isA<ReservationLoaded>().having(
-                (state) => state.reservations.any(
-                  (reservation) =>
-              reservation.id == ReservationId(2) &&
+            (state) => state.reservations.any(
+              (reservation) =>
+                  reservation.id == ReservationId(2) &&
                   reservation.status == ReservationStatus.cancelled,
             ),
             'rezervacija je otkazana',
@@ -173,10 +167,7 @@ void main() {
 
       await expectLater(
         bloc.stream,
-        emitsInOrder([
-          isA<ReservationLoading>(),
-          isA<ReservationError>(),
-        ]),
+        emitsInOrder([isA<ReservationLoading>(), isA<ReservationError>()]),
       );
 
       await bloc.close();
@@ -185,22 +176,15 @@ void main() {
 
   group('ReservationBloc - zamena repository implementacije', () {
     test('radi sa praznim FakeRepository', () async {
-      final emptyRepository = FakeReservationRepository(
-        clock: () => now,
-      );
+      final emptyRepository = FakeReservationRepository(clock: () => now);
 
-      final bloc = ReservationBloc(
-        repository: emptyRepository,
-      );
+      final bloc = ReservationBloc(repository: emptyRepository);
 
       bloc.add(const ReservationsRequested());
 
       await expectLater(
         bloc.stream,
-        emitsInOrder([
-          isA<ReservationLoading>(),
-          isA<ReservationEmpty>(),
-        ]),
+        emitsInOrder([isA<ReservationLoading>(), isA<ReservationEmpty>()]),
       );
 
       await bloc.close();
@@ -209,18 +193,13 @@ void main() {
     test('radi sa repository koji simulira gresku', () async {
       repository.simulateError = true;
 
-      final bloc = ReservationBloc(
-        repository: repository,
-      );
+      final bloc = ReservationBloc(repository: repository);
 
       bloc.add(const ReservationsRequested());
 
       await expectLater(
         bloc.stream,
-        emitsInOrder([
-          isA<ReservationLoading>(),
-          isA<ReservationError>(),
-        ]),
+        emitsInOrder([isA<ReservationLoading>(), isA<ReservationError>()]),
       );
 
       await bloc.close();

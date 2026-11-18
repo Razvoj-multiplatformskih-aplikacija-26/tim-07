@@ -1,4 +1,3 @@
-
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:test/test.dart';
@@ -6,24 +5,15 @@ import 'package:test/test.dart';
 void main() {
   group('ReservationState Equatable', () {
     test('dva Initial stanja su jednaka', () {
-      expect(
-        const ReservationInitial(),
-        equals(const ReservationInitial()),
-      );
+      expect(const ReservationInitial(), equals(const ReservationInitial()));
     });
 
     test('dva Loading stanja su jednaka', () {
-      expect(
-        const ReservationLoading(),
-        equals(const ReservationLoading()),
-      );
+      expect(const ReservationLoading(), equals(const ReservationLoading()));
     });
 
     test('dva Empty stanja su jednaka', () {
-      expect(
-        const ReservationEmpty(),
-        equals(const ReservationEmpty()),
-      );
+      expect(const ReservationEmpty(), equals(const ReservationEmpty()));
     });
 
     test('Error stanja sa istom porukom su jednaka', () {
@@ -41,10 +31,7 @@ void main() {
     });
 
     test('Loaded stanja sa praznim listama su jednaka', () {
-      expect(
-        const ReservationLoaded([]),
-        equals(const ReservationLoaded([])),
-      );
+      expect(const ReservationLoaded([]), equals(const ReservationLoaded([])));
     });
 
     test('Loaded stanja sa razlicitim rezervacijama nisu jednaka', () {

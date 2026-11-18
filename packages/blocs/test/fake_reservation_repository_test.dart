@@ -1,7 +1,10 @@
-
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:test/test.dart';
+
+/// Pravilo domena koje je repozitorijum odbio, sa tačnom vrstom pravila.
+Matcher isRuleViolation<T extends ReservationValidationError>() =>
+    isA<ReservationRuleViolation>().having((e) => e.error, 'error', isA<T>());
 
 void main() {
   late FakeReservationRepository repository;
@@ -27,29 +30,20 @@ void main() {
     });
 
     test('filtrira rezervacije po korisniku', () async {
-      final reservations = await repository.getReservationsByUser(
-        UserId(1),
-      );
+      final reservations = await repository.getReservationsByUser(UserId(1));
 
       expect(reservations, hasLength(2));
-      expect(
-        reservations.every((r) => r.userId == UserId(1)),
-        isTrue,
-      );
+      expect(reservations.every((r) => r.userId == UserId(1)), isTrue);
     });
 
     test('filtrira rezervacije po terenu', () async {
-      final reservations = await repository.getReservationsByField(
-        FieldId(2),
-      );
+      final reservations = await repository.getReservationsByField(FieldId(2));
 
       expect(reservations, hasLength(1));
     });
 
     test('pronalazi rezervaciju po ID-u', () async {
-      final reservation = await repository.getReservationById(
-        ReservationId(1),
-      );
+      final reservation = await repository.getReservationById(ReservationId(1));
 
       expect(reservation, isNotNull);
       expect(reservation!.fieldId, FieldId(1));
@@ -101,7 +95,7 @@ void main() {
           startTime: DateTime(2026, 10, 18, 19),
           endTime: DateTime(2026, 10, 18, 21),
         ),
-        throwsStateError,
+        throwsA(isRuleViolation<SlotAlreadyTaken>()),
       );
     });
 
@@ -113,14 +107,12 @@ void main() {
           startTime: DateTime(2026, 10, 22, 6),
           endTime: DateTime(2026, 10, 22, 7),
         ),
-        throwsStateError,
+        throwsA(isRuleViolation<OutsideWorkingHours>()),
       );
     });
 
     test('omogucava otkazivanje rezervacije', () async {
-      final cancelled = await repository.cancelReservation(
-        ReservationId(2),
-      );
+      final cancelled = await repository.cancelReservation(ReservationId(2));
 
       expect(cancelled.status, ReservationStatus.cancelled);
     });

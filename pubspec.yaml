@@ -11,4 +11,5 @@ workspace:
   - packages/blocs
   - packages/contract
   - packages/mapping
+  - packages/messages
   - apps/server

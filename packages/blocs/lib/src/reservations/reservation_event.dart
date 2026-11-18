@@ -1,4 +1,3 @@
-
 import 'package:equatable/equatable.dart';
 import 'package:domain/domain.dart';
 
@@ -50,12 +49,7 @@ final class ReservationCreateRequested extends ReservationEvent {
   });
 
   @override
-  List<Object?> get props => [
-    fieldId,
-    userId,
-    startTime,
-    endTime,
-  ];
+  List<Object?> get props => [fieldId, userId, startTime, endTime];
 }
 
 /// Potvrđivanje rezervacije.

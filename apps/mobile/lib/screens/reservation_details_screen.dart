@@ -2,6 +2,7 @@ import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:messages/messages.dart';
 
 import '../actions/reservation_cancel.dart';
 import '../data/mobile_demo_data.dart';
