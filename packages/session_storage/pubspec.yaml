@@ -1,0 +1,25 @@
+name: session_storage
+description: "Terenzo: where the sign-in token is kept between launches - secure storage of the platform, or the browser storage on the web."
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.5
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  api_client: any
+  flutter_secure_storage: ^10.0.0
+  web: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  test: ^1.25.6
+  http: ^1.2.0
+  contract: any
+  domain: any
+resolution: workspace

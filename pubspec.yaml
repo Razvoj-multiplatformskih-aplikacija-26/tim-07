@@ -13,4 +13,5 @@ workspace:
   - packages/mapping
   - packages/messages
   - packages/api_client
+  - packages/session_storage
   - apps/server
