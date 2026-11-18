@@ -1,3 +1,4 @@
+
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:test/test.dart';
@@ -71,9 +72,8 @@ void main() {
       );
 
       // Ovde koristimo TestReservationRepository umesto FakeRepository.
-      final ReservationRepository repository = TestReservationRepository(
-        reservations,
-      );
+      final ReservationRepository repository =
+      TestReservationRepository(reservations);
 
       // Bloc ne mora da se menja.
       final bloc = ReservationBloc(repository: repository);
@@ -85,7 +85,7 @@ void main() {
         emitsInOrder([
           isA<ReservationLoading>(),
           isA<ReservationLoaded>().having(
-            (state) => state.reservations.length,
+                (state) => state.reservations.length,
             'broj rezervacija',
             3,
           ),
@@ -96,7 +96,8 @@ void main() {
     });
 
     test('radi i kada druga implementacija vrati praznu listu', () async {
-      final ReservationRepository repository = TestReservationRepository([]);
+      final ReservationRepository repository =
+      TestReservationRepository([]);
 
       final bloc = ReservationBloc(repository: repository);
 
@@ -104,7 +105,10 @@ void main() {
 
       await expectLater(
         bloc.stream,
-        emitsInOrder([isA<ReservationLoading>(), isA<ReservationEmpty>()]),
+        emitsInOrder([
+          isA<ReservationLoading>(),
+          isA<ReservationEmpty>(),
+        ]),
       );
 
       await bloc.close();

@@ -1,3 +1,4 @@
+
 import 'package:domain/domain.dart';
 
 /// Repozitorijum koji cuva rezervacije u memoriji.
@@ -12,7 +13,6 @@ final class FakeReservationRepository implements ReservationRepository {
   final List<BlockedPeriod> _blockedPeriods;
   // Funkcija koja vraca "sada"; test moze da ubaci svoj sat umesto pravog.
   final DateTime Function() _clock;
-
   /// Kada je true, citanje rezervacija simulira gresku.
   bool simulateError = false;
 
@@ -27,21 +27,22 @@ final class FakeReservationRepository implements ReservationRepository {
     List<FieldSchedule> schedules = const [],
     List<BlockedPeriod> blockedPeriods = const [],
     DateTime Function()? clock,
-  }) : // List.of pravi izmenjivu kopiju, pa add radi i kad je prosledjen const [].
-       _reservations = List.of(reservations),
-       _fields = List.of(fields),
-       _schedules = List.of(schedules),
-       _blockedPeriods = List.of(blockedPeriods),
-       // Ako sat nije prosledjen, koristi se pravi (DateTime.now je funkcija bez zagrada).
-       _clock = clock ?? DateTime.now,
-       // Sledeci id je najveci postojeci id + 1 (fold trazi maksimum).
-       _nextReservationId =
-           reservations.fold<int>(
-             0,
-             (maxId, reservation) =>
-                 reservation.id.value > maxId ? reservation.id.value : maxId,
-           ) +
-           1;
+  })  : // List.of pravi izmenjivu kopiju, pa add radi i kad je prosledjen const [].
+        _reservations = List.of(reservations),
+        _fields = List.of(fields),
+        _schedules = List.of(schedules),
+        _blockedPeriods = List.of(blockedPeriods),
+        // Ako sat nije prosledjen, koristi se pravi (DateTime.now je funkcija bez zagrada).
+        _clock = clock ?? DateTime.now,
+        // Sledeci id je najveci postojeci id + 1 (fold trazi maksimum).
+        _nextReservationId = reservations.fold<int>(
+          0,
+              (maxId, reservation) =>
+          reservation.id.value > maxId
+              ? reservation.id.value
+              : maxId,
+        ) +
+            1;
 
   /// Automatski osvezava statuse prema trenutnom vremenu.
   // Domen odredjuje novi status, a ovde se samo upisuje; poziva se pre svake operacije.
@@ -82,6 +83,7 @@ final class FakeReservationRepository implements ReservationRepository {
     throw StateError('Teren nije pronadjen.');
   }
 
+
   // async umotava rezultat i bacenu gresku u Future, da se poklopi sa ugovorom.
   @override
   Future<List<Reservation>> getReservations() async {
@@ -100,12 +102,15 @@ final class FakeReservationRepository implements ReservationRepository {
     return List.unmodifiable(_reservations);
   }
 
+
   @override
   Future<List<Reservation>> getReservationsByUser(UserId userId) async {
     _refreshStatuses();
 
     // where zadrzava samo rezervacije trazenog korisnika.
-    return List.unmodifiable(_reservations.where((r) => r.userId == userId));
+    return List.unmodifiable(
+      _reservations.where((r) => r.userId == userId),
+    );
   }
 
   @override
@@ -113,7 +118,9 @@ final class FakeReservationRepository implements ReservationRepository {
     _refreshStatuses();
 
     // where zadrzava samo rezervacije trazenog terena.
-    return List.unmodifiable(_reservations.where((r) => r.fieldId == fieldId));
+    return List.unmodifiable(
+      _reservations.where((r) => r.fieldId == fieldId),
+    );
   }
 
   @override
@@ -201,7 +208,10 @@ final class FakeReservationRepository implements ReservationRepository {
     final reservation = _findReservation(reservationId);
 
     // Prvo se proverava da li je prelaz iz trenutnog u trazeni status uopste dozvoljen.
-    if (!canTransitionReservationStatus(reservation.status, status)) {
+    if (!canTransitionReservationStatus(
+      reservation.status,
+      status,
+    )) {
       throw const ReservationRuleViolation(InvalidReservationStatus());
     }
 
@@ -225,12 +235,16 @@ final class FakeReservationRepository implements ReservationRepository {
 
     // Zavrsavanje rezervacije je automatsko.
     if (status == ReservationStatus.completed) {
-      throw StateError('Rezervacija se zavrsava automatski nakon termina.');
+      throw StateError(
+        'Rezervacija se zavrsava automatski nakon termina.',
+      );
     }
 
     // Pravi kopiju sa novim statusom i zamenjuje staru na istom mestu u listi.
     final updated = reservation.copyWith(status: status);
-    final index = _reservations.indexWhere((r) => r.id == reservationId);
+    final index = _reservations.indexWhere(
+          (r) => r.id == reservationId,
+    );
 
     _reservations[index] = updated;
 
@@ -245,7 +259,10 @@ final class FakeReservationRepository implements ReservationRepository {
     final now = _clock();
 
     // Domen proverava status, prozor za check-in i da check-in nije vec uradjen.
-    final error = validateCheckIn(reservation: reservation, now: now);
+    final error = validateCheckIn(
+      reservation: reservation,
+      now: now,
+    );
 
     if (error != null) {
       throw ReservationRuleViolation(error);
@@ -254,7 +271,9 @@ final class FakeReservationRepository implements ReservationRepository {
     // Upisuje vreme dolaska; status ostaje confirmed, a completed dolazi kasnije automatski.
     final updated = reservation.copyWith(checkedInAt: now);
 
-    final index = _reservations.indexWhere((r) => r.id == reservationId);
+    final index = _reservations.indexWhere(
+          (r) => r.id == reservationId,
+    );
 
     _reservations[index] = updated;
 
@@ -262,7 +281,9 @@ final class FakeReservationRepository implements ReservationRepository {
   }
 
   @override
-  Future<Reservation> cancelReservation(ReservationId reservationId) async {
+  Future<Reservation> cancelReservation(
+      ReservationId reservationId,
+      ) async {
     // Otkazivanje je promena statusa u cancelled, pa vazi ista provera prelaza i roka.
     return updateReservationStatus(
       reservationId: reservationId,

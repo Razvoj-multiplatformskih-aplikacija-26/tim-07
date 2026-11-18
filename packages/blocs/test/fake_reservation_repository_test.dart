@@ -1,3 +1,4 @@
+
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:test/test.dart';
@@ -30,20 +31,29 @@ void main() {
     });
 
     test('filtrira rezervacije po korisniku', () async {
-      final reservations = await repository.getReservationsByUser(UserId(1));
+      final reservations = await repository.getReservationsByUser(
+        UserId(1),
+      );
 
       expect(reservations, hasLength(2));
-      expect(reservations.every((r) => r.userId == UserId(1)), isTrue);
+      expect(
+        reservations.every((r) => r.userId == UserId(1)),
+        isTrue,
+      );
     });
 
     test('filtrira rezervacije po terenu', () async {
-      final reservations = await repository.getReservationsByField(FieldId(2));
+      final reservations = await repository.getReservationsByField(
+        FieldId(2),
+      );
 
       expect(reservations, hasLength(1));
     });
 
     test('pronalazi rezervaciju po ID-u', () async {
-      final reservation = await repository.getReservationById(ReservationId(1));
+      final reservation = await repository.getReservationById(
+        ReservationId(1),
+      );
 
       expect(reservation, isNotNull);
       expect(reservation!.fieldId, FieldId(1));
@@ -112,7 +122,9 @@ void main() {
     });
 
     test('omogucava otkazivanje rezervacije', () async {
-      final cancelled = await repository.cancelReservation(ReservationId(2));
+      final cancelled = await repository.cancelReservation(
+        ReservationId(2),
+      );
 
       expect(cancelled.status, ReservationStatus.cancelled);
     });

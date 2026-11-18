@@ -18,44 +18,41 @@ void main() {
     );
   });
 
-  test(
-    'posle akcije ponovo ucitava samo rezervacije istog korisnika',
-    () async {
-      final bloc = ReservationBloc(repository: repository);
+  test('posle akcije ponovo ucitava samo rezervacije istog korisnika', () async {
+    final bloc = ReservationBloc(repository: repository);
 
-      bloc.add(const UserReservationsRequested(UserId(1)));
-      await expectLater(
-        bloc.stream,
-        emitsInOrder([isA<ReservationLoading>(), isA<ReservationLoaded>()]),
-      );
+    bloc.add(const UserReservationsRequested(UserId(1)));
+    await expectLater(
+      bloc.stream,
+      emitsInOrder([isA<ReservationLoading>(), isA<ReservationLoaded>()]),
+    );
 
-      bloc.add(const ReservationCancelRequested(ReservationId(1)));
+    bloc.add(const ReservationCancelRequested(ReservationId(1)));
 
-      await expectLater(
-        bloc.stream,
-        emitsInOrder([
-          isA<ReservationLoading>(),
-          isA<ReservationLoaded>()
-              .having(
-                (state) => state.reservations.every(
-                  (reservation) => reservation.userId == const UserId(1),
-                ),
-                'samo korisnik 1',
-                isTrue,
-              )
-              .having(
-                (state) => state.reservations
-                    .firstWhere((r) => r.id == const ReservationId(1))
-                    .status,
-                'status rezervacije 1',
-                ReservationStatus.cancelled,
+    await expectLater(
+      bloc.stream,
+      emitsInOrder([
+        isA<ReservationLoading>(),
+        isA<ReservationLoaded>()
+            .having(
+              (state) => state.reservations.every(
+                (reservation) => reservation.userId == const UserId(1),
               ),
-        ]),
-      );
+              'samo korisnik 1',
+              isTrue,
+            )
+            .having(
+              (state) => state.reservations
+                  .firstWhere((r) => r.id == const ReservationId(1))
+                  .status,
+              'status rezervacije 1',
+              ReservationStatus.cancelled,
+            ),
+      ]),
+    );
 
-      await bloc.close();
-    },
-  );
+    await bloc.close();
+  });
 
   test('bez prethodnog ucitavanja akcija ucitava sve rezervacije', () async {
     final bloc = ReservationBloc(repository: repository);

@@ -1,3 +1,4 @@
+
 import 'package:bloc/bloc.dart';
 import 'package:domain/domain.dart';
 import 'package:messages/messages.dart';
@@ -8,7 +9,8 @@ import 'reservation_state.dart';
 /// Upravlja rezervacijama koristeci repository port.
 ///
 /// Ne zna da li podaci dolaze iz memorije, baze ili API-ja.
-final class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
+final class ReservationBloc
+    extends Bloc<ReservationEvent, ReservationState> {
   // Ugovor iz domena: Bloc ne zna koja konkretna klasa stoji iza njega.
   final ReservationRepository repository;
   // Zapamceni "recept" poslednjeg ucitavanja, da se posle akcije osvezi isti pregled.
@@ -16,7 +18,7 @@ final class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
 
   // Prosledjuje pocetno stanje roditeljskom Bloc-u i registruje obradu dogadjaja.
   ReservationBloc({required this.repository})
-    : super(const ReservationInitial()) {
+      : super(const ReservationInitial()) {
     // Svaki on<> kaze: kad stigne ovaj tip dogadjaja, pozovi ovu funkciju.
     on<ReservationsRequested>(_onReservationsRequested);
     on<UserReservationsRequested>(_onUserReservationsRequested);
@@ -29,10 +31,10 @@ final class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
 
   // Zajednicko ucitavanje: Loading, pa Loaded ili Empty, a greska postaje Error.
   Future<void> _loadReservations(
-    Emitter<ReservationState> emit,
-    // Funkcija koja zna sta tacno da trazi od repozitorijuma (sve, korisnik, teren).
-    Future<List<Reservation>> Function() fetch,
-  ) async {
+      Emitter<ReservationState> emit,
+      // Funkcija koja zna sta tacno da trazi od repozitorijuma (sve, korisnik, teren).
+      Future<List<Reservation>> Function() fetch,
+      ) async {
     // Pamti upit da ga _performAction moze ponoviti posle izmene.
     _lastQuery = fetch;
     // Ekran odmah prikaze spinner dok se ceka odgovor.
@@ -56,9 +58,9 @@ final class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
 
   // Dogadjaj: ucitaj sve rezervacije.
   Future<void> _onReservationsRequested(
-    ReservationsRequested event,
-    Emitter<ReservationState> emit,
-  ) async {
+      ReservationsRequested event,
+      Emitter<ReservationState> emit,
+      ) async {
     await _loadReservations(
       emit,
       // Prosledjuje se sama metoda (bez zagrada), jer vec nema parametre.
@@ -68,37 +70,37 @@ final class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
 
   // Dogadjaj: ucitaj rezervacije jednog korisnika (mobilna aplikacija).
   Future<void> _onUserReservationsRequested(
-    UserReservationsRequested event,
-    Emitter<ReservationState> emit,
-  ) async {
+      UserReservationsRequested event,
+      Emitter<ReservationState> emit,
+      ) async {
     await _loadReservations(
       emit,
-      // Lambda nosi userId u sebi, pa isti upit moze da se ponovi i kasnije.
-      () => repository.getReservationsByUser(event.userId),
+          // Lambda nosi userId u sebi, pa isti upit moze da se ponovi i kasnije.
+          () => repository.getReservationsByUser(event.userId),
     );
   }
 
   // Dogadjaj: ucitaj rezervacije jednog terena (backoffice).
   Future<void> _onFieldReservationsRequested(
-    FieldReservationsRequested event,
-    Emitter<ReservationState> emit,
-  ) async {
+      FieldReservationsRequested event,
+      Emitter<ReservationState> emit,
+      ) async {
     await _loadReservations(
       emit,
-      // Lambda nosi fieldId u sebi, isto kao kod korisnika.
-      () => repository.getReservationsByField(event.fieldId),
+          // Lambda nosi fieldId u sebi, isto kao kod korisnika.
+          () => repository.getReservationsByField(event.fieldId),
     );
   }
 
   // Dogadjaj: napravi novu rezervaciju.
   Future<void> _onReservationCreateRequested(
-    ReservationCreateRequested event,
-    Emitter<ReservationState> emit,
-  ) async {
+      ReservationCreateRequested event,
+      Emitter<ReservationState> emit,
+      ) async {
     await _performAction(
       emit,
-      // Pravila (preklapanje, radno vreme...) proverava repozitorijum, ne Bloc.
-      () => repository.createReservation(
+          // Pravila (preklapanje, radno vreme...) proverava repozitorijum, ne Bloc.
+          () => repository.createReservation(
         fieldId: event.fieldId,
         userId: event.userId,
         startTime: event.startTime,
@@ -109,13 +111,13 @@ final class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
 
   // Dogadjaj: potvrdi rezervaciju (backoffice).
   Future<void> _onReservationConfirmRequested(
-    ReservationConfirmRequested event,
-    Emitter<ReservationState> emit,
-  ) async {
+      ReservationConfirmRequested event,
+      Emitter<ReservationState> emit,
+      ) async {
     await _performAction(
       emit,
-      // Dogadjaj znaci "potvrdi", zato je trazeni status uvek confirmed.
-      () => repository.updateReservationStatus(
+          // Dogadjaj znaci "potvrdi", zato je trazeni status uvek confirmed.
+          () => repository.updateReservationStatus(
         reservationId: event.reservationId,
         status: ReservationStatus.confirmed,
       ),
@@ -124,29 +126,32 @@ final class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
 
   // Dogadjaj: otkazi rezervaciju (rok proverava repozitorijum preko domena).
   Future<void> _onReservationCancelRequested(
-    ReservationCancelRequested event,
-    Emitter<ReservationState> emit,
-  ) async {
+      ReservationCancelRequested event,
+      Emitter<ReservationState> emit,
+      ) async {
     await _performAction(
       emit,
-      () => repository.cancelReservation(event.reservationId),
+          () => repository.cancelReservation(event.reservationId),
     );
   }
 
   // Dogadjaj: korisnik potvrdjuje dolazak (check-in).
   Future<void> _onReservationCheckInRequested(
-    ReservationCheckInRequested event,
-    Emitter<ReservationState> emit,
-  ) async {
-    await _performAction(emit, () => repository.checkIn(event.reservationId));
+      ReservationCheckInRequested event,
+      Emitter<ReservationState> emit,
+      ) async {
+    await _performAction(
+      emit,
+          () => repository.checkIn(event.reservationId),
+    );
   }
 
   // Zajednicka akcija koja menja podatke: Loading, izvrsi, ponovo ucitaj, prikazi rezultat.
   Future<void> _performAction(
-    Emitter<ReservationState> emit,
-    // Funkcija koja izvrsava jednu izmenu i vraca izmenjenu rezervaciju.
-    Future<Reservation> Function() action,
-  ) async {
+      Emitter<ReservationState> emit,
+      // Funkcija koja izvrsava jednu izmenu i vraca izmenjenu rezervaciju.
+      Future<Reservation> Function() action,
+      ) async {
     // Ekran prikaze spinner dok izmena traje.
     emit(const ReservationLoading());
 

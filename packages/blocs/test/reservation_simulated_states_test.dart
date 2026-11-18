@@ -1,3 +1,4 @@
+
 import 'package:blocs/blocs.dart';
 import 'package:test/test.dart';
 
@@ -16,7 +17,10 @@ void main() {
 
       await expectLater(
         bloc.stream,
-        emitsInOrder([isA<ReservationLoading>(), isA<ReservationEmpty>()]),
+        emitsInOrder([
+          isA<ReservationLoading>(),
+          isA<ReservationEmpty>(),
+        ]),
       );
 
       await bloc.close();
@@ -35,7 +39,10 @@ void main() {
 
       await expectLater(
         bloc.stream,
-        emitsInOrder([isA<ReservationLoading>(), isA<ReservationError>()]),
+        emitsInOrder([
+          isA<ReservationLoading>(),
+          isA<ReservationError>(),
+        ]),
       );
 
       await bloc.close();
@@ -52,7 +59,10 @@ void main() {
 
       await expectLater(
         bloc.stream,
-        emitsInOrder([isA<ReservationLoading>(), isA<ReservationLoaded>()]),
+        emitsInOrder([
+          isA<ReservationLoading>(),
+          isA<ReservationLoaded>(),
+        ]),
       );
 
       await bloc.close();
