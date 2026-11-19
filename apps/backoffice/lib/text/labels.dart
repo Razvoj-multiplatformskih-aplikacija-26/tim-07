@@ -103,3 +103,11 @@ String weekdayLong(DateTime date) => const [
 String formatDayMonth(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}.'
     '${date.month.toString().padLeft(2, '0')}.';
+
+String roleLabel(UserRole role) {
+  return switch (role) {
+    UserRole.user => 'Korisnik',
+    UserRole.owner => 'Vlasnik',
+    UserRole.admin => 'Administrator',
+  };
+}

@@ -295,6 +295,22 @@ final class TerenzoHandlers {
     return _page(request, users, (user) => user.toDto(includeContact: true).toJson());
   }
 
+  Future<Response> setUserActive(Request request) async {
+    final actor = actorOf(request);
+    if (!canManageUsers(actor)) throw const Refused.forbidden();
+    final id = UserId(parseBody(() => int.parse(request.rawPathParameters[#id]!)));
+    final object = await readObject(request);
+    final body = parseBody(() => SetUserActiveRequestDto.fromJson(object));
+
+    final target = await terenzo.getUserById(id);
+    if (target == null) throw const Refused.notFound();
+    // Svoj nalog administrator ne sme da deaktivira (`canDeactivateUser`).
+    if (!canDeactivateUser(actor, target)) throw const Refused.forbidden();
+
+    final changed = await terenzo.setUserActive(id, active: body.isActive);
+    return json(200, changed.toDto(includeContact: true).toJson());
+  }
+
   Future<SportsField> _visibleField(Request request, AppUser? actor) async {
     final id = parseBody(() => int.parse(request.rawPathParameters[#id]!));
     final field = await terenzo.getFieldById(FieldId(id));

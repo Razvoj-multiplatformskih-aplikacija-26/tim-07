@@ -15,7 +15,8 @@ const _reservationColumns = '''
   r.checked_in_at, r.cancellation_reason, r.created_at
 ''';
 
-const _userColumns = 'u.id, u.first_name, u.last_name, u.email, u.phone_number, u.date_of_birth, u.role, u.created_at';
+const _userColumns =
+    'u.id, u.first_name, u.last_name, u.email, u.phone_number, u.date_of_birth, u.role, u.created_at, u.is_active';
 
 typedef Account = ({AppUser user, String passwordHash});
 
@@ -58,6 +59,15 @@ final class TerenzoStore {
       parameters: {'role': role?.name},
     );
     return [for (final row in rows) _user(row.toColumnMap())];
+  }
+
+  /// Menja stanje naloga i vraća ga; `null` kada takvog naloga nema.
+  Future<AppUser?> setUserActive(UserId id, {required bool active}) async {
+    final rows = await _database.execute(
+      Sql.named('UPDATE users SET is_active = @active WHERE id = @id RETURNING id'),
+      parameters: {'id': id.value, 'active': active},
+    );
+    return rows.isEmpty ? null : user(id);
   }
 
   Future<UserId> insertUser({
@@ -402,6 +412,7 @@ AppUser _user(Map<String, Object?> row) => AppUser(
   dateOfBirth: row['date_of_birth']! as DateTime,
   role: UserRole.values.byName(row['role']! as String),
   createdAt: row['created_at']! as DateTime,
+  isActive: row['is_active']! as bool,
 );
 
 SportsField _field(Map<String, Object?> row) => SportsField(

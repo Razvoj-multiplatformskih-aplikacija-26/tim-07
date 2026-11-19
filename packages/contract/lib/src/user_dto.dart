@@ -14,6 +14,10 @@ final class UserDto {
   final String? phoneNumber;
   final DateTime? createdAt;
 
+  /// Samo u listi naloga za administratora; `null` znači da server nije
+  /// poslao stanje (klijent tada smatra nalog aktivnim).
+  final bool? isActive;
+
   const UserDto({
     required this.id,
     required this.firstName,
@@ -22,6 +26,7 @@ final class UserDto {
     required this.role,
     this.phoneNumber,
     this.createdAt,
+    this.isActive,
   });
 
   Map<String, Object?> toJson() => {
@@ -32,6 +37,7 @@ final class UserDto {
     'role': role,
     'phoneNumber': ?phoneNumber,
     if (createdAt case final createdAt?) 'createdAt': instantToJson(createdAt),
+    'isActive': ?isActive,
   };
 
   factory UserDto.fromJson(Map<String, Object?> json) => UserDto(
@@ -42,7 +48,20 @@ final class UserDto {
     role: jsonString(json, 'role'),
     phoneNumber: jsonOptionalString(json, 'phoneNumber'),
     createdAt: jsonOptionalInstant(json, 'createdAt'),
+    isActive: jsonOptionalBool(json, 'isActive'),
   );
+}
+
+/// Telo zahteva `PATCH /users/:id`: administrator deaktivira ili aktivira nalog.
+final class SetUserActiveRequestDto {
+  final bool isActive;
+
+  const SetUserActiveRequestDto({required this.isActive});
+
+  Map<String, Object?> toJson() => {'isActive': isActive};
+
+  factory SetUserActiveRequestDto.fromJson(Map<String, Object?> json) =>
+      SetUserActiveRequestDto(isActive: jsonBool(json, 'isActive'));
 }
 
 /// Telo zahteva `POST /auth/login`.

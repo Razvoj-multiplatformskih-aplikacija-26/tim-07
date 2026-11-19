@@ -348,6 +348,19 @@ void main() {
       expect(json.keys, isNot(contains('dateOfBirth')));
     });
 
+    test('stanje naloga ide samo administratoru, a bez njega je nalog aktivan', () {
+      final off = user.copyWith(isActive: false);
+
+      expect(off.toDto().toJson().keys, isNot(contains('isActive')));
+      expect(off.toDto(includeContact: true).toJson()['isActive'], false);
+
+      final back = UserDto.fromJson(
+        wire(off.toDto(includeContact: true).toJson()),
+      ).toDomain();
+      expect(back.isActive, isFalse);
+      expect(UserDto.fromJson(wire(off.toDto().toJson())).toDomain().isActive, isTrue);
+    });
+
     test('prijavljen korisnik se vraća sa istim identitetom i ulogom', () {
       final back = UserDto.fromJson(wire(user.toDto().toJson())).toDomain();
 

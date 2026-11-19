@@ -46,6 +46,7 @@ abstract final class ApiPaths {
   // Statistika i nalozi.
   static const stats = '/stats/occupancy';
   static const users = '/users';
+  static String user(int id) => '/users/$id';
 }
 
 /// Imena parametara upita.

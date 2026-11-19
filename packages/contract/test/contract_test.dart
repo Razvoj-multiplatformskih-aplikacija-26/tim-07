@@ -367,6 +367,38 @@ void main() {
       expect(json.keys, isNot(contains('passwordHash')));
     });
 
+    test('stanje naloga stiže samo kada ga server pošalje', () {
+      final without = UserDto.fromJson(userJson);
+      expect(without.isActive, isNull);
+      expect(without.toJson().keys, isNot(contains('isActive')));
+
+      final off = UserDto.fromJson({...userJson, 'isActive': false});
+      expect(off.isActive, isFalse);
+      expect(off.toJson()['isActive'], false);
+      expect(
+        () => UserDto.fromJson({...userJson, 'isActive': 'ne'}),
+        throwsFormatException,
+      );
+    });
+
+    test('zahtev za deaktivaciju naloga', () {
+      const request = SetUserActiveRequestDto(isActive: false);
+
+      expect(
+        SetUserActiveRequestDto.fromJson(wire(request.toJson())).isActive,
+        isFalse,
+      );
+      expect(
+        () => SetUserActiveRequestDto.fromJson({}),
+        throwsFormatException,
+      );
+      expect(ApiPaths.user(7), '/users/7');
+    });
+
+    test('deaktiviran nalog je 403, ne 401', () {
+      expect(httpStatusFor(ErrorCodes.accountDeactivated), 403);
+    });
+
     test('zahtev za prijavu', () {
       const request = LoginRequestDto(email: 'ana@example.com', password: 'x');
 

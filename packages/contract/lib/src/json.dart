@@ -56,6 +56,13 @@ bool jsonBool(Map<String, Object?> json, String key) => switch (json[key]) {
   _ => throw FormatException('Expected "$key" to be true or false', json),
 };
 
+bool? jsonOptionalBool(Map<String, Object?> json, String key) =>
+    switch (json[key]) {
+      null => null,
+      final bool value => value,
+      _ => throw FormatException('Expected "$key" to be true or false', json),
+    };
+
 /// Trenutak na mreži: ISO-8601 u UTC, uvek sa `Z` na kraju.
 ///
 /// Trenutak bez zone se odbija jer se ne zna u kojoj zoni je napisan.
