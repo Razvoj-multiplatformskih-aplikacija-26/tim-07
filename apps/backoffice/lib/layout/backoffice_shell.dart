@@ -1,11 +1,13 @@
 import 'package:blocs/blocs.dart';
+import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../screens/blocked_periods_page.dart';
 import '../screens/calendar_page.dart';
 import '../screens/fields_page.dart';
-import '../screens/placeholder_page.dart';
+import '../screens/field_review_page.dart';
+import '../screens/statistics_page.dart';
 import '../screens/reservations_page.dart';
 import '../widgets/simulation_menu.dart';
 
@@ -19,56 +21,62 @@ class BackofficeShell extends StatefulWidget {
 class _BackofficeShellState extends State<BackofficeShell> {
   int _selectedIndex = 0;
 
-  static const _sections = <_Section>[
+  static const _common = <_Section>[
     _Section(
       label: 'Rezervacije',
       icon: Icons.event_note_outlined,
       selectedIcon: Icons.event_note,
+      page: ReservationsPage(),
     ),
     _Section(
       label: 'Kalendar',
       icon: Icons.calendar_month_outlined,
       selectedIcon: Icons.calendar_month,
+      page: CalendarPage(),
     ),
     _Section(
       label: 'Tereni',
       icon: Icons.stadium_outlined,
       selectedIcon: Icons.stadium,
+      page: FieldsPage(),
     ),
     _Section(
       label: 'Blokade',
       icon: Icons.event_busy_outlined,
       selectedIcon: Icons.event_busy,
+      page: BlockedPeriodsPage(),
     ),
     _Section(
       label: 'Statistika',
       icon: Icons.bar_chart_outlined,
       selectedIcon: Icons.bar_chart,
+      page: StatisticsPage(),
     ),
   ];
 
-  Widget _buildPage(int index) {
-    return switch (index) {
-      0 => const ReservationsPage(),
-      1 => const CalendarPage(),
-      2 => const FieldsPage(),
-      3 => const BlockedPeriodsPage(),
-      _ => const PlaceholderPage(
-          title: 'Statistika',
-          message: 'Statistika zauzetosti biće dodata u narednim taskovima.',
-        ),
-    };
-  }
+  static const _review = _Section(
+    label: 'Odobravanje',
+    icon: Icons.fact_check_outlined,
+    selectedIcon: Icons.fact_check,
+    page: FieldReviewPage(),
+  );
+
+  List<_Section> _sectionsFor(AppUser user) => [
+    ..._common,
+    if (canReviewField(user)) _review,
+  ];
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final sections = _sectionsFor(context.read<AppUser>());
+    final selected = _selectedIndex < sections.length ? _selectedIndex : 0;
 
     return Scaffold(
       body: Row(
         children: [
           NavigationRail(
-            selectedIndex: _selectedIndex,
+            selectedIndex: selected,
             onDestinationSelected: (index) {
               setState(() => _selectedIndex = index);
             },
@@ -88,7 +96,7 @@ class _BackofficeShellState extends State<BackofficeShell> {
               ),
             ),
             destinations: [
-              for (final section in _sections)
+              for (final section in sections)
                 NavigationRailDestination(
                   icon: Icon(section.icon),
                   selectedIcon: Icon(section.selectedIcon),
@@ -101,11 +109,11 @@ class _BackofficeShellState extends State<BackofficeShell> {
             child: Column(
               children: [
                 _Header(
-                  title: _sections[_selectedIndex].label,
-                  showSimulation: _selectedIndex == 0,
+                  title: sections[selected].label,
+                  showSimulation: selected == 0,
                 ),
                 const Divider(height: 1),
-                Expanded(child: _buildPage(_selectedIndex)),
+                Expanded(child: sections[selected].page),
               ],
             ),
           ),
@@ -119,11 +127,13 @@ class _Section {
   final String label;
   final IconData icon;
   final IconData selectedIcon;
+  final Widget page;
 
   const _Section({
     required this.label,
     required this.icon,
     required this.selectedIcon,
+    required this.page,
   });
 }
 

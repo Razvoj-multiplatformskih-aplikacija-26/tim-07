@@ -14,6 +14,7 @@ class BackofficeApp extends StatefulWidget {
   final SportsFieldRepository fieldRepository;
   final FieldScheduleRepository scheduleRepository;
   final AuthRepository? authRepository;
+  final StatisticsRepository? statisticsRepository;
   final AppUser? owner;
 
   const BackofficeApp({
@@ -22,6 +23,7 @@ class BackofficeApp extends StatefulWidget {
     required this.fieldRepository,
     required this.scheduleRepository,
     this.authRepository,
+    this.statisticsRepository,
     this.owner,
   }) : assert(authRepository != null || owner != null);
 
@@ -72,6 +74,22 @@ class _BackofficeAppState extends State<BackofficeApp> {
     Widget _workspace(AppUser owner) => MultiBlocProvider(
     key: ValueKey(owner.id),
     providers: [
+      RepositoryProvider<AppUser>.value(value: owner),
+      BlocProvider(
+        create: (_) => StatisticsBloc(
+          repository: widget.statisticsRepository ??
+              LocalStatisticsRepository(
+                fields: widget.fieldRepository,
+                schedules: widget.scheduleRepository,
+                reservations: widget.repository,
+                viewer: owner,
+              ),
+          viewer: owner,
+        )..add(const StatisticsStarted()),
+      ),
+      BlocProvider(
+        create: (_) => FieldReviewBloc(fields: widget.fieldRepository, reviewer: owner)..add(const FieldReviewStarted()),
+      ),
       BlocProvider(
         create: (_) => BlockedPeriodsBloc(
           fields: widget.fieldRepository,
