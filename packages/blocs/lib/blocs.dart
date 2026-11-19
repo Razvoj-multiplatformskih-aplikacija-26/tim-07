@@ -19,3 +19,4 @@ export 'src/reservation_form/reservation_form_bloc.dart';
 export 'src/repositories/fake_field_schedule_repository.dart';
 export 'src/blocked_periods/blocked_periods_bloc.dart';
 export 'src/field_management/field_management_bloc.dart';
+export 'src/calendar/calendar_bloc.dart';
