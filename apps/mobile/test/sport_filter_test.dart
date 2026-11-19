@@ -3,6 +3,7 @@ import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/data/mobile_auth.dart';
+import 'package:mobile/data/mobile_availability_repository.dart';
 import 'package:mobile/data/mobile_demo_data.dart';
 import 'package:mobile/data/mobile_field_repository.dart';
 import 'package:mobile/data/mobile_repository.dart';
@@ -23,9 +24,15 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
+    final reservations = createMobileRepository(delay: Duration.zero);
+
     await tester.pumpWidget(
       MyApp(
-        repository: createMobileRepository(delay: Duration.zero),
+        repository: reservations,
+        availabilityRepository: createMobileAvailabilityRepository(
+          reservations: reservations,
+          delay: Duration.zero,
+        ),
         fieldRepository: MobileFakeFieldRepository(store, delay: Duration.zero),
         authRepository: createMobileAuthRepository(delay: Duration.zero),
         initialLocation: '/fields',

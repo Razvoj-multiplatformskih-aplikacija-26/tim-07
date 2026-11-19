@@ -2,6 +2,7 @@ import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/data/mobile_auth.dart';
+import 'package:mobile/data/mobile_availability_repository.dart';
 import 'package:mobile/data/mobile_demo_data.dart';
 import 'package:mobile/data/mobile_field_repository.dart';
 import 'package:mobile/data/mobile_fake_repository.dart';
@@ -28,6 +29,10 @@ void main() {
     await tester.pumpWidget(
       MyApp(
         repository: repository,
+        availabilityRepository: createMobileAvailabilityRepository(
+          reservations: repository,
+          delay: Duration.zero,
+        ),
         fieldRepository: createMobileFieldRepository(delay: Duration.zero),
         authRepository: auth,
         initialLocation: location,

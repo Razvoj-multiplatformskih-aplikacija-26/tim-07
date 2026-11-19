@@ -553,4 +553,71 @@ void main() {
       expect(failureOf(StateError('baza je pala')), isNull);
     });
   });
+
+  group('termini terena', () {
+    test('stanje termina ima kod i vraća se isto', () {
+      for (final state in SlotState.values) {
+        expect(slotStateFromCode(slotStateToCode(state)), state);
+      }
+      expect(slotStateToCode(SlotState.taken), 'taken');
+      expect(slotStateFromCode('maintenance'), isNull);
+    });
+
+    test('dan terena prolazi kroz ugovor i JSON', () {
+      final slots = [
+        AvailabilitySlot(
+          startTime: DateTime.utc(2026, 11, 20, 8),
+          endTime: DateTime.utc(2026, 11, 20, 9),
+          state: SlotState.free,
+        ),
+        AvailabilitySlot(
+          startTime: DateTime.utc(2026, 11, 20, 9),
+          endTime: DateTime.utc(2026, 11, 20, 10),
+          state: SlotState.blocked,
+        ),
+      ];
+
+      final dto = slots.toDto(
+        fieldId: const FieldId(3),
+        date: DateTime(2026, 11, 20),
+      );
+      final back = AvailabilityDto.fromJson(wire(dto.toJson())).toDomain();
+
+      expect(dto.date, '2026-11-20');
+      expect(dto.fieldId, 3);
+      expect(back.map((s) => s.state), [SlotState.free, SlotState.blocked]);
+      expect(back.first.startTime, DateTime.utc(2026, 11, 20, 8));
+      expect(back.first.duration, const Duration(hours: 1));
+    });
+
+    test('lokalni termini idu na mrežu u UTC', () {
+      final slot = AvailabilitySlot(
+        startTime: DateTime(2026, 11, 20, 8),
+        endTime: DateTime(2026, 11, 20, 9),
+        state: SlotState.free,
+      );
+
+      expect(slot.toDto().startTime.isUtc, isTrue);
+      expect(slot.toDto().startTime, DateTime(2026, 11, 20, 8).toUtc());
+    });
+
+    test('dan bez termina (teren ne radi) ostaje prazna lista', () {
+      final dto = <AvailabilitySlot>[].toDto(
+        fieldId: const FieldId(3),
+        date: DateTime(2026, 11, 22),
+      );
+
+      expect(AvailabilityDto.fromJson(wire(dto.toJson())).toDomain(), isEmpty);
+    });
+
+    test('nepoznato stanje termina baca izuzetak, ne pretvara se u slobodan', () {
+      final dto = SlotDto(
+        startTime: DateTime.utc(2026, 11, 20, 8),
+        endTime: DateTime.utc(2026, 11, 20, 9),
+        state: 'maintenance',
+      );
+
+      expect(dto.toDomain, throwsA(isA<UnknownCodeException>()));
+    });
+  });
 }

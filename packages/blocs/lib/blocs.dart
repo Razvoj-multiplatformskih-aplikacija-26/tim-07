@@ -13,3 +13,5 @@ export 'src/fields/fields_bloc.dart';
 export 'src/fields/fields_event.dart';
 export 'src/fields/fields_state.dart';
 export 'src/repositories/fake_sports_field_repository.dart';
+export 'src/availability/availability_bloc.dart';
+export 'src/repositories/fake_availability_repository.dart';
