@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../screens/blocked_periods_page.dart';
+import '../screens/calendar_page.dart';
 import '../screens/placeholder_page.dart';
 import '../screens/reservations_page.dart';
 import '../widgets/simulation_menu.dart';
@@ -24,6 +25,11 @@ class _BackofficeShellState extends State<BackofficeShell> {
       selectedIcon: Icons.event_note,
     ),
     _Section(
+      label: 'Kalendar',
+      icon: Icons.calendar_month_outlined,
+      selectedIcon: Icons.calendar_month,
+    ),
+    _Section(
       label: 'Tereni',
       icon: Icons.stadium_outlined,
       selectedIcon: Icons.stadium,
@@ -43,11 +49,12 @@ class _BackofficeShellState extends State<BackofficeShell> {
   Widget _buildPage(int index) {
     return switch (index) {
       0 => const ReservationsPage(),
-      1 => const PlaceholderPage(
+      1 => const CalendarPage(),
+      2 => const PlaceholderPage(
           title: 'Tereni',
           message: 'Upravljanje terenima biće dodato u narednim taskovima.',
         ),
-      2 => const BlockedPeriodsPage(),
+      3 => const BlockedPeriodsPage(),
       _ => const PlaceholderPage(
           title: 'Statistika',
           message: 'Statistika zauzetosti biće dodata u narednim taskovima.',

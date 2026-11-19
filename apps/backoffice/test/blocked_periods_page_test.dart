@@ -10,6 +10,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:messages/messages.dart';
 
+import 'support.dart';
+
 void main() {
   final today = DateUtils.dateOnly(DateTime.now());
   final tomorrow = today.add(const Duration(days: 1));
@@ -303,7 +305,7 @@ void main() {
 
   group('greške izvora', () {
     testWidgets('teren se ne učita: razlog i „Pokušaj ponovo“', (tester) async {
-      await pumpPage(tester, fields: _FailingFields(), settle: false);
+      await pumpPage(tester, fields: FailingFields(), settle: false);
       await tester.pumpAndSettle();
 
       expect(find.text('Blokade nisu učitane'), findsOneWidget);
@@ -311,53 +313,4 @@ void main() {
       expect(find.text('Pokušaj ponovo'), findsOneWidget);
     });
   });
-}
-
-/// Spisak terena koji ne može da se učita.
-final class _FailingFields implements SportsFieldRepository {
-  @override
-  Future<List<SportsField>> getFieldsByOwner(UserId ownerId) async =>
-      throw const ServerUnreachableException();
-
-  @override
-  Future<List<SportsField>> getFields() async =>
-      throw const ServerUnreachableException();
-
-  @override
-  Future<List<SportsField>> getPublicFields() async =>
-      throw const ServerUnreachableException();
-
-  @override
-  Future<SportsField?> getFieldById(FieldId id) async =>
-      throw const ServerUnreachableException();
-
-  @override
-  Future<SportsField> createField({
-    required UserId ownerId,
-    required String name,
-    required String description,
-    required SportType sport,
-    required String address,
-    required String city,
-    required int pricePerHour,
-    required String contactPhone,
-    List<String> imageUrls = const [],
-    required ConfirmationMode confirmationMode,
-  }) async => throw const ServerUnreachableException();
-
-  @override
-  Future<SportsField> updateField(SportsField field) async =>
-      throw const ServerUnreachableException();
-
-  @override
-  Future<List<SportsField>> getFieldsAwaitingApproval() async =>
-      throw const ServerUnreachableException();
-
-  @override
-  Future<SportsField> reviewField({
-    required FieldId fieldId,
-    required UserId reviewerId,
-    required ApprovalStatus decision,
-    String? reason,
-  }) async => throw const ServerUnreachableException();
 }
