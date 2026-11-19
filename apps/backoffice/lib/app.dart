@@ -57,7 +57,11 @@ class _BackofficeAppState extends State<BackofficeApp> {
   late final ReservationSelectionBloc _selection = ReservationSelectionBloc();
   late final DirectoryCubit _directory = DirectoryCubit(
     fieldRepository: widget.fieldRepository,
-    initial: BackofficeDirectory.demo(),
+    // Demo imena samo u demo režimu (bez prijave). Nad serverom ID-jevi
+    // korisnika nisu demo ID-jevi: tuđe ime pored rezervacije je gore od praznog.
+    initial: widget.authRepository == null
+        ? BackofficeDirectory.demo()
+        : const BackofficeDirectory(),
   );
   late final AuthBloc? _auth = switch (widget.authRepository) {
     final repository? => AuthBloc(repository: repository, app: ClientApp.backoffice)..add(const AuthStarted()),
