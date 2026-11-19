@@ -1,27 +1,30 @@
 FROM dart:3.13.5 AS build
-WORKDIR /src
-
+WORKDIR /workspace
+COPY <<EOF pubspec.yaml
+name: terenzo_server_image
+environment:
+  sdk: ^3.13.0
+workspace:
+  - packages/domain
+  - packages/contract
+  - packages/mapping
+  - apps/server
+EOF
 COPY pubspec.lock ./
-COPY packages/ packages/
-COPY apps/server/ apps/server/
-RUN printf 'name: tim_07_workspace\npublish_to: none\nenvironment:\n  sdk: ^3.13.0\nworkspace:\n' > pubspec.yaml \
- && for dir in packages/*/; do printf '  - %s\n' "${dir%/}" >> pubspec.yaml; done \
- && printf '  - apps/server\n' >> pubspec.yaml \
- && cat pubspec.yaml
+COPY packages/domain packages/domain
+COPY packages/contract packages/contract
+COPY packages/mapping packages/mapping
+COPY apps/server apps/server
 RUN dart pub get
-RUN dart compile exe apps/server/bin/server.dart -o /src/server
+RUN dart compile exe apps/server/bin/server.dart -o /server
 
-FROM debian:bookworm-slim
-RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates tzdata curl \
- && rm -rf /var/lib/apt/lists/*
-
-ENV TZ=Europe/Belgrade
-
+FROM scratch
+COPY --from=build /runtime/ /
+COPY --from=build /usr/share/zoneinfo/Europe/Belgrade /usr/share/zoneinfo/Europe/Belgrade
+COPY --from=build /server /app/server
 WORKDIR /app
-COPY --from=build /src/server /app/server
-COPY apps/server/migrations/ /app/migrations/
-
+ENV HOST=0.0.0.0
+ENV TZ=Europe/Belgrade
 USER 65532:65532
 EXPOSE 8080
 CMD ["/app/server"]

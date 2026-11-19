@@ -1,68 +1,36 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:postgres/postgres.dart';
+import 'package:relic/relic.dart' show IOAdapter, RelicServer;
 import 'package:server/server.dart';
 
 Future<void> main() async {
-  final ServerConfig config;
-  try {
-    config = await ServerConfig.load();
-  } on ConfigException catch (error) {
-    stderr.writeln(error);
-    stderr.writeln('Kopiraj .env.example u .env (cp .env.example .env).');
-    exitCode = 78;
-    return;
-  }
-
-  final database = await Database.connect(
-    host: config.dbHost,
-    port: config.dbPort,
-    user: config.dbUser,
-    password: config.dbPassword,
-    database: config.dbName,
-    log: stdout.writeln,
+  final config = ServerConfig.fromEnvironment(serverEnvironment());
+  final database = Pool<void>.withUrl(config.databaseUrl);
+  await seedDemoData(database, now: DateTime.now(), demoPassword: config.demoPassword);
+  final terenzo = PostgresTerenzo(database);
+  final handlers = TerenzoHandlers(
+    terenzo: terenzo,
+    notifications: FakeNotificationGateway(apiKey: config.notificationApiKey),
   );
-  stdout.writeln('Povezan sa bazom ${config.dbHost}:${config.dbPort}/${config.dbName}');
+  final sessions = SessionHandlers(store: TerenzoStore(database), secret: config.jwtSecret, ttl: config.sessionTtl);
+  final server = RelicServer(() => IOAdapter.bind(InternetAddress(config.host), port: config.port));
+  await server.mountAndStart(buildHandler(handlers, sessions, corsOrigins: config.corsOrigins));
+  stdout.writeln('Terenzo server on http://${config.host}:${config.port}');
+  await _stopSignal();
+  await server.close();
+  await database.close();
+}
 
-  try {
-    final migrations = await Migration.readDirectory(Directory(config.migrationsDirectory));
-    await MigrationRunner(database, log: stdout.writeln).migrate(migrations);
-  } on Object catch (error) {
-    stderr.writeln(error);
-    await database.close();
-    exitCode = 1;
-    return;
-  }
-
-  final handler = buildHandler(
-    modules: [
-      HealthRoutes(isDatabaseReady: database.ping),
-      AuthRoutes(
-        credentials: MySqlCredentialStore(database),
-        users: MySqlUserRepository(database),
-        tokens: TokenService(secret: config.jwtSecret, ttl: config.tokenTtl),
-      ),
-    ],
-    corsAllowedOrigins: config.corsAllowedOrigins,
-  );
-
-  final server = await startServer(
-    handler,
-    host: config.host,
-    port: config.port,
-  );
-
-  stdout.writeln('Terenzo server sluša na http://${config.host}:${server.port}');
-
-  final signals = [
-    ProcessSignal.sigint,
-    if (!Platform.isWindows) ProcessSignal.sigterm,
+Future<void> _stopSignal() async {
+  final stop = Completer<void>();
+  final subscriptions = [
+    for (final signal in [ProcessSignal.sigint, if (!Platform.isWindows) ProcessSignal.sigterm])
+      signal.watch().listen((_) => stop.isCompleted ? null : stop.complete()),
   ];
-  for (final signal in signals) {
-    signal.watch().listen((_) async {
-      stdout.writeln('Gašenje servera…');
-      await server.close();
-      await database.close();
-      exit(0);
-    });
+  await stop.future;
+  for (final subscription in subscriptions) {
+    await subscription.cancel();
   }
 }

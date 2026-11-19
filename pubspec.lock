@@ -57,6 +57,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  buffer:
+    dependency: transitive
+    description:
+      name: buffer
+      sha256: "389da2ec2c16283c8787e0adaede82b1842102f8c8aae2f49003a766c5c6b3d1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.3"
   characters:
     dependency: transitive
     description:
@@ -65,6 +73,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  charcode:
+    dependency: transitive
+    description:
+      name: charcode
+      sha256: fb0f1107cac15a5ea6ef0a6ef71a807b9e4267c713bb93e00e92d737cc8dbd8a
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.0"
   checked_yaml:
     dependency: transitive
     description:
@@ -501,14 +517,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
-  mysql1:
-    dependency: transitive
-    description:
-      name: mysql1
-      sha256: "675420b1b19fd076b55483df00dce2c156e6127a99fa483e61b937722360b2e6"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.22.0"
   nested:
     dependency: transitive
     description:
@@ -637,6 +645,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.2"
+  postgres:
+    dependency: transitive
+    description:
+      name: postgres
+      sha256: dee84c58a69ea165c8a8daf7d755049f5868d4407062dde9305f914d2a33d0d3
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.5.18"
   provider:
     dependency: transitive
     description:

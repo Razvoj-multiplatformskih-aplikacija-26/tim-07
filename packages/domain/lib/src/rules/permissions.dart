@@ -139,5 +139,8 @@ bool canReviewField(AppUser user) => user.role == UserRole.admin;
 bool canViewStatistics(AppUser user) =>
     user.role == UserRole.owner || user.role == UserRole.admin;
 
+bool canViewFieldStatistics(AppUser user, SportsField field) =>
+    user.role == UserRole.admin || _isOwnerOf(user, field);
+
 /// Spisak naloga i deaktivaciju naloga sme samo administrator.
 bool canManageUsers(AppUser user) => user.role == UserRole.admin;
