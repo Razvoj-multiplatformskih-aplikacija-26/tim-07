@@ -267,6 +267,26 @@ void main() {
       expect((reject.statusCode, codeOf(reject)), (403, ErrorCodes.forbidden));
     });
 
+    test('the owner of the field sees who booked, and the user sees his own reservation without that block', () async {
+      final user = await logIn('korisnik1@terenzo.rs');
+      final owner = await logIn('vlasnik1@terenzo.rs');
+      final created = reservationOf(await reserve(user, await fieldId('Arena Fudbal'), day(16, 10), day(16, 11)));
+
+      final seenByUser = await http.get(base.replace(path: ApiPaths.reservation(created.id)), headers: as(user));
+      final seenByOwner = await http.get(base.replace(path: ApiPaths.reservation(created.id)), headers: as(owner));
+      final listedForOwner = await http.get(
+        base.replace(path: ApiPaths.reservations, queryParameters: {ApiQuery.limit: '100'}),
+        headers: as(owner),
+      );
+
+      expect(reservationOf(seenByUser).customer, isNull);
+      final customer = reservationOf(seenByOwner).customer!;
+      expect((customer.firstName, customer.lastName, customer.email), ('Ana', 'Anić', 'korisnik1@terenzo.rs'));
+      expect(customer.phoneNumber, isNotNull);
+      final page = PageDto.fromJson(jsonDecode(listedForOwner.body) as Map<String, Object?>, ReservationDto.fromJson);
+      expect(page.items.every((r) => r.customer != null), isTrue);
+    });
+
     test('a user cannot see or cancel another user’s reservation', () async {
       final ana = await logIn('korisnik1@terenzo.rs');
       final marko = await logIn('korisnik2@terenzo.rs');

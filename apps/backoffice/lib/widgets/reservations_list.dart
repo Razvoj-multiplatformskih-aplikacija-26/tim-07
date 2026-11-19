@@ -38,7 +38,7 @@ class ReservationsList extends StatelessWidget {
           leading: Text('#${reservation.id.value}'),
           title: Text(directory.fieldName(reservation.fieldId)),
           subtitle: Text(
-            '${directory.userName(reservation.userId)} · '
+            '${directory.customerName(reservation)} · '
             '${formatDate(reservation.startTime)} · '
             '${formatTimeRange(reservation.startTime, reservation.endTime)}',
           ),

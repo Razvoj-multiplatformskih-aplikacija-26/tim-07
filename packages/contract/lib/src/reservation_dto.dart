@@ -1,4 +1,5 @@
 import 'json.dart';
+import 'user_dto.dart';
 
 /// Rezervacija kako je server vraća. Novac je ceo broj dinara, trenuci su UTC.
 final class ReservationDto {
@@ -18,6 +19,11 @@ final class ReservationDto {
   final String? cancellationReason;
   final DateTime createdAt;
 
+  /// Ko je rezervisao: samo kada rezervaciju čita vlasnik terena ili
+  /// administrator (kontakt podaci uključeni). Korisnik svoju rezervaciju
+  /// dobija bez ovoga.
+  final UserDto? customer;
+
   const ReservationDto({
     required this.id,
     required this.fieldId,
@@ -30,6 +36,7 @@ final class ReservationDto {
     this.checkedInAt,
     this.cancellationReason,
     required this.createdAt,
+    this.customer,
   });
 
   Map<String, Object?> toJson() => {
@@ -45,6 +52,7 @@ final class ReservationDto {
       'checkedInAt': instantToJson(checkedInAt),
     'cancellationReason': ?cancellationReason,
     'createdAt': instantToJson(createdAt),
+    if (customer case final customer?) 'customer': customer.toJson(),
   };
 
   factory ReservationDto.fromJson(Map<String, Object?> json) => ReservationDto(
@@ -59,6 +67,11 @@ final class ReservationDto {
     checkedInAt: jsonOptionalInstant(json, 'checkedInAt'),
     cancellationReason: jsonOptionalString(json, 'cancellationReason'),
     createdAt: jsonInstant(json, 'createdAt'),
+    customer: switch (json['customer']) {
+      null => null,
+      final Map<String, Object?> object => UserDto.fromJson(object),
+      _ => throw FormatException('Expected "customer" to be an object', json),
+    },
   );
 }
 

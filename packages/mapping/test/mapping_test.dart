@@ -348,6 +348,33 @@ void main() {
       expect(json.keys, isNot(contains('dateOfBirth')));
     });
 
+    test('rezervacija sa korisnikom ga nosi sa kontaktom, ali bez datuma rođenja', () {
+      final reservation = Reservation(
+        id: const ReservationId(1),
+        fieldId: const FieldId(2),
+        userId: user.id,
+        startTime: DateTime.utc(2026, 12, 1, 10),
+        endTime: DateTime.utc(2026, 12, 1, 11),
+        totalPrice: 3000,
+        status: ReservationStatus.pending,
+        createdAt: DateTime.utc(2026, 11, 1),
+        customer: user,
+      );
+
+      final json = reservation.toDto().toJson();
+      final customer = json['customer']! as Map<String, Object?>;
+      expect(customer['phoneNumber'], '0642222222');
+      expect(customer.keys, isNot(contains('dateOfBirth')));
+
+      final back = ReservationDto.fromJson(wire(json)).toDomain();
+      expect(back.customer?.fullName, 'Ana Jovanović');
+      expect(back.userId, user.id);
+      expect(
+        ReservationDto.fromJson(wire(reservation.withCustomer(null).toDto().toJson())).toDomain().customer,
+        isNull,
+      );
+    });
+
     test('stanje naloga ide samo administratoru, a bez njega je nalog aktivan', () {
       final off = user.copyWith(isActive: false);
 

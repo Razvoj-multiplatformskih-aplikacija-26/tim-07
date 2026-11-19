@@ -331,3 +331,14 @@ Administrator vidi sve naloge, traži ih, filtrira po ulozi i deaktivira ih.
 **Odbačeno.**
 - *Brisanje naloga.* Rezervacije imaju strani ključ na korisnika, a brisanje bi izgubilo istoriju koja je potrebna statistici.
 - *Deaktivacija samo zabranjuje novu prijavu.* Korisnik bi mogao da nastavi sa starim tokenom do isteka (do 8 sati), što nije ono što administrator traži.
+
+## 21. Ko je rezervisao: podaci uz rezervaciju za osoblje terena
+
+Vlasnik terena mora da zna ko je rezervisao (ime i kontakt), a ne sme da čita tuđe naloge (`GET /users` je samo za administratora, odluka 20).
+
+- **Odluka.** Server uz rezervaciju šalje i `customer` (ime, email, telefon, bez datuma rođenja) kada je čita neko ko nije sam rezervisao: vlasnik tog terena ili administrator. Korisnik svoju rezervaciju dobija bez tog bloka. `Reservation.customer` (domen) je zato opcioni.
+- **Obrazloženje.** Podaci o korisniku idu samo uz rezervaciju koju osoblje ionako sme da vidi (`canViewReservation`), pa vlasnik ne dobija ništa o ljudima koji nisu rezervisali njegove terene. Odvojen spisak naloga za vlasnika bi tražio svoje pravilo i svoju rutu.
+- **Klijent** piše ime iz `reservation.customer`; kada ga nema, „Korisnik #id“. Ime se nikad ne uzima iz demo podataka kada postoji server.
+- Pretraga po korisniku u tabeli rezervacija (odluka 19) računa se na serveru nad istim nalozima.
+
+**Odbačeno.** *`GET /users/:id` za vlasnika.* Dodatan zahtev po rezervaciji (ili keš imenika) za podatak koji server već ima u istom upitu.

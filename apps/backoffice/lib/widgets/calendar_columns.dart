@@ -206,7 +206,7 @@ class _ReservationTile extends StatelessWidget {
         _ => Icons.check_circle_outline,
       },
       title: range,
-      subtitle: '$label: ${directory.userName(reservation.userId)}',
+      subtitle: '$label: ${directory.customerName(reservation)}',
       kind: switch (status) {
         ReservationStatus.pending => CalendarTileKind.pending,
         ReservationStatus.completed => CalendarTileKind.completed,

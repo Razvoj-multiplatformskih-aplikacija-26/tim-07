@@ -1,6 +1,7 @@
 
 import '../enums.dart';
 import '../ids.dart';
+import 'app_user.dart';
 
 /// Rezervacija sportskog terena.
 ///
@@ -38,6 +39,12 @@ final class Reservation {
   /// Vreme kreiranja rezervacije.
   final DateTime createdAt;
 
+  /// Ko je rezervisao, kako ga vidi osoblje terena. Server ga šalje samo
+  /// vlasniku terena i administratoru (korisnik svoju rezervaciju ne vidi sa
+  /// ovim poljem), pa je `null` kada ga ima samo [userId]. Ekran tada piše
+  /// „Korisnik #id“, ne tuđe ime.
+  final AppUser? customer;
+
   const Reservation({
     required this.id,
     required this.fieldId,
@@ -50,6 +57,7 @@ final class Reservation {
     this.checkedInAt,
     this.cancellationReason,
     required this.createdAt,
+    this.customer,
   });
 
   /// Trajanje rezervacije, bez ograničenja na 60 minuta.
@@ -100,6 +108,23 @@ final class Reservation {
       checkedInAt: checkedInAt ?? this.checkedInAt,
       cancellationReason: cancellationReason ?? this.cancellationReason,
       createdAt: createdAt,
+      customer: customer,
     );
   }
+
+  /// Ista rezervacija sa podacima o korisniku (za odgovor osoblju terena).
+  Reservation withCustomer(AppUser? customer) => Reservation(
+    id: id,
+    fieldId: fieldId,
+    userId: userId,
+    startTime: startTime,
+    endTime: endTime,
+    totalPrice: totalPrice,
+    status: status,
+    paymentStatus: paymentStatus,
+    checkedInAt: checkedInAt,
+    cancellationReason: cancellationReason,
+    createdAt: createdAt,
+    customer: customer,
+  );
 }

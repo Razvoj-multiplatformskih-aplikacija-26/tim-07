@@ -20,6 +20,14 @@ final class BackofficeDirectory {
   String fieldName(FieldId id) => fields[id]?.name ?? 'Teren #${id.value}';
 
   String userName(UserId id) => users[id]?.fullName ?? 'Korisnik #${id.value}';
+
+  /// Ko je rezervisao: podaci koje je server poslao uz rezervaciju (vlasnik
+  /// terena ih dobija), a ako ih nema, imenik. Ime se nikad ne izmišlja.
+  AppUser? customerOf(Reservation reservation) =>
+      reservation.customer ?? user(reservation.userId);
+
+  String customerName(Reservation reservation) =>
+      reservation.customer?.fullName ?? userName(reservation.userId);
 }
 
 final class DirectoryCubit extends Cubit<BackofficeDirectory> {

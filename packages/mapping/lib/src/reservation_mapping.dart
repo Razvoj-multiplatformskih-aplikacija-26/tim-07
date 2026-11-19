@@ -2,6 +2,7 @@ import 'package:contract/contract.dart';
 import 'package:domain/domain.dart';
 
 import 'codes_mapping.dart';
+import 'user_mapping.dart';
 
 extension ReservationMapping on Reservation {
   ReservationDto toDto() => ReservationDto(
@@ -16,6 +17,7 @@ extension ReservationMapping on Reservation {
     checkedInAt: checkedInAt,
     cancellationReason: cancellationReason,
     createdAt: createdAt,
+    customer: customer?.toDto(includeContact: true),
   );
 }
 
@@ -41,6 +43,7 @@ extension ReservationDtoMapping on ReservationDto {
     checkedInAt: checkedInAt,
     cancellationReason: cancellationReason,
     createdAt: createdAt,
+    customer: customer?.toDomain(),
   );
 
   /// Isto što [toDomain], ali nepoznat kod daje `null` umesto izuzetka.
