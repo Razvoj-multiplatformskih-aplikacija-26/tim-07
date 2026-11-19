@@ -1,8 +1,8 @@
-import 'package:backoffice/app.dart';
 import 'package:backoffice/data/backoffice_demo_data.dart';
 import 'package:backoffice/data/backoffice_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support.dart';
 
 void main() {
   testWidgets('Backoffice prikazuje navigaciju i tabelu rezervacija',
@@ -12,7 +12,7 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      BackofficeApp(repository: createBackofficeRepository(delay: Duration.zero)),
+      backofficeApp(createBackofficeRepository(delay: Duration.zero)),
     );
     await tester.pumpAndSettle();
 
@@ -32,7 +32,7 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      BackofficeApp(repository: createBackofficeRepository(delay: Duration.zero)),
+      backofficeApp(createBackofficeRepository(delay: Duration.zero)),
     );
     await tester.pumpAndSettle();
 

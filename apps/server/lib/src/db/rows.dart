@@ -59,7 +59,9 @@ abstract final class Rows {
         isOpen: _bool(row['is_open']),
       );
 
+  // Identifikator se čita kada je kolona izabrana (upit za proveru preklapanja je ne traži).
   static BlockedPeriod blockedPeriod(ResultRow row) => BlockedPeriod(
+        id: row.toColumnMap().containsKey('id') ? BlockedPeriodId(_int(row['id'])) : null,
         fieldId: FieldId(_int(row['field_id'])),
         startTime: _dateTime(row['start_time']),
         endTime: _dateTime(row['end_time']),

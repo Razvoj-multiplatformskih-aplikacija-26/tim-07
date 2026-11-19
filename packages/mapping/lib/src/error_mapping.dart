@@ -71,10 +71,35 @@ extension ErrorDtoMapping on ErrorDto {
   };
 }
 
+extension BlockedPeriodErrorMapping on BlockedPeriodError {
+  /// Kod greške blokade terena; bez podataka, poruku pravi klijent.
+  ErrorDto toErrorDto() => switch (this) {
+    InvalidBlockRange() => const ErrorDto(code: ErrorCodes.invalidBlockRange),
+    BlockInPast() => const ErrorDto(code: ErrorCodes.blockInPast),
+    BlockOverlapsConfirmedReservation() => const ErrorDto(
+      code: ErrorCodes.blockOverlapsReservation,
+    ),
+  };
+
+  ApiFailure toFailure() => ApiFailure(toErrorDto());
+}
+
+extension BlockedPeriodErrorDtoMapping on ErrorDto {
+  /// Pravilo blokade za ovaj kod, ili `null` kada kod nije pravilo blokade.
+  BlockedPeriodError? toBlockedPeriodError() => switch (code) {
+    ErrorCodes.invalidBlockRange => const InvalidBlockRange(),
+    ErrorCodes.blockInPast => const BlockInPast(),
+    ErrorCodes.blockOverlapsReservation =>
+      const BlockOverlapsConfirmedReservation(),
+    _ => null,
+  };
+}
+
 /// Prevodi izuzetak domena u grešku za mrežu, ili vraća `null` kada izuzetak
 /// nije greška domena (tada je to `internal`, a detalji ostaju u logu servera).
 ApiFailure? failureOf(Object error) => switch (error) {
   ReservationRuleViolation(:final error) => error.toFailure(),
+  BlockedPeriodRuleViolation(:final error) => error.toFailure(),
   // Ne otkriva da li zapis postoji kod nekog drugog (odluka 4): isto kao tuđ zapis.
   EntityNotFound() => const ApiFailure(ErrorDto(code: ErrorCodes.notFound)),
   ApprovalTransitionNotAllowed(:final from, :final to) => ApiFailure(

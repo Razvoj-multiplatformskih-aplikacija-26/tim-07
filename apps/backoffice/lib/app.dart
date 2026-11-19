@@ -9,8 +9,19 @@ import 'theme/backoffice_theme.dart';
 
 class BackofficeApp extends StatelessWidget {
   final ReservationRepository repository;
+  final SportsFieldRepository fieldRepository;
+  final FieldScheduleRepository scheduleRepository;
 
-  const BackofficeApp({super.key, required this.repository});
+  /// Prijavljeni vlasnik. Dok backoffice nema prijavu (T51) je demo vlasnik.
+  final AppUser owner;
+
+  const BackofficeApp({
+    super.key,
+    required this.repository,
+    required this.fieldRepository,
+    required this.scheduleRepository,
+    required this.owner,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +34,15 @@ class BackofficeApp extends StatelessWidget {
               ..add(const ReservationsRequested()),
           ),
           BlocProvider(create: (_) => ReservationSelectionBloc()),
+          // Učitava se kada se otvori stranica „Blokade“.
+          BlocProvider(
+            create: (_) => BlockedPeriodsBloc(
+              fields: fieldRepository,
+              schedules: scheduleRepository,
+              reservations: repository,
+              owner: owner,
+            )..add(const BlockedPeriodsStarted()),
+          ),
         ],
         child: MaterialApp(
           title: 'Terenzo backoffice',

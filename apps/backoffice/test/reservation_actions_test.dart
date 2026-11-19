@@ -1,9 +1,9 @@
-import 'package:backoffice/app.dart';
 import 'package:backoffice/data/backoffice_fake_repository.dart';
 import 'package:backoffice/data/backoffice_repository.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support.dart';
 
 void main() {
   late BackofficeFakeReservationRepository repository;
@@ -15,7 +15,7 @@ void main() {
 
     repository = createBackofficeRepository(delay: Duration.zero);
 
-    await tester.pumpWidget(BackofficeApp(repository: repository));
+    await tester.pumpWidget(backofficeApp(repository));
     await tester.pumpAndSettle();
   }
 

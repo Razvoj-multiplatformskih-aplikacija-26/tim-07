@@ -443,4 +443,37 @@ void main() {
       expect(ApiHeaders.bearer('t'), 'Bearer t');
     });
   });
+
+  group('blokade terena', () {
+    test('blokada nosi identifikator koji server dodeli', () {
+      final dto = BlockedPeriodDto.fromJson({
+        'id': 5,
+        'fieldId': 3,
+        'startTime': '2026-11-21T08:00:00.000Z',
+        'endTime': '2026-11-21T12:00:00.000Z',
+        'reason': 'Održavanje',
+      });
+
+      expect(dto.id, 5);
+      expect(wire(dto.toJson())['id'], 5);
+    });
+
+    test('blokada bez identifikatora (zahtev) ga ne šalje', () {
+      final dto = BlockedPeriodDto(
+        fieldId: 3,
+        startTime: DateTime.utc(2026, 11, 21, 8),
+        endTime: DateTime.utc(2026, 11, 21, 12),
+      );
+
+      expect(dto.toJson().containsKey('id'), isFalse);
+      expect(BlockedPeriodDto.fromJson(wire(dto.toJson())).id, isNull);
+    });
+
+    test('adresa jedne blokade i statusi grešaka blokade', () {
+      expect(ApiPaths.blockedPeriod(3, 5), '/fields/3/blocked-periods/5');
+      expect(httpStatusFor(ErrorCodes.blockOverlapsReservation), 409);
+      expect(httpStatusFor(ErrorCodes.invalidBlockRange), 422);
+      expect(httpStatusFor(ErrorCodes.blockInPast), 422);
+    });
+  });
 }

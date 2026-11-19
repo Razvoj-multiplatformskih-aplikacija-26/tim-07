@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 
 const field = FieldId(1);
 const other = FieldId(2);
+final before = DateTime(2026, 11, 19, 8);
 
 FieldSchedule day(
   FieldId id,
@@ -123,13 +124,129 @@ void main() {
       },
     );
 
-    test('dodata blokada se vidi', () async {
-      final repository = FakeFieldScheduleRepository();
+    test('dodata blokada se vidi, sa identifikatorom', () async {
+      final repository = FakeFieldScheduleRepository(clock: () => before);
 
       final added = await repository.addBlockedPeriod(block(field, 10, 12));
 
       expect(added.fieldId, field);
+      expect(added.id, isNotNull);
       expect(await repository.getBlockedPeriods(field), [added]);
+    });
+  });
+
+  group('blokiranje terena (T61)', () {
+    Reservation reservation(
+      FieldId onField,
+      int hour,
+      ReservationStatus status,
+    ) => Reservation(
+      id: const ReservationId(1),
+      fieldId: onField,
+      userId: const UserId(7),
+      startTime: DateTime(2026, 11, 20, hour),
+      endTime: DateTime(2026, 11, 20, hour + 1),
+      totalPrice: 1000,
+      status: status,
+      createdAt: DateTime(2026, 11, 1),
+    );
+
+    FakeFieldScheduleRepository repositoryWith(List<Reservation> existing) =>
+        FakeFieldScheduleRepository(
+          reservations: FakeReservationRepository(
+            reservations: existing,
+            clock: () => before,
+          ),
+          clock: () => before,
+        );
+
+    test(
+      'početne blokade dobijaju identifikatore, nove sledeći po redu',
+      () async {
+        final repository = FakeFieldScheduleRepository(
+          blockedPeriods: [block(field, 10, 12), block(field, 14, 16)],
+          clock: () => before,
+        );
+
+        final initial = await repository.getBlockedPeriods(field);
+        final added = await repository.addBlockedPeriod(block(field, 18, 20));
+
+        expect(initial.map((b) => b.id?.value), [1, 2]);
+        expect(added.id, const BlockedPeriodId(3));
+      },
+    );
+
+    test(
+      'blokada preko potvrđene rezervacije se odbija i ne upisuje',
+      () async {
+        final repository = repositoryWith([
+          reservation(field, 11, ReservationStatus.confirmed),
+        ]);
+
+        await expectLater(
+          repository.addBlockedPeriod(block(field, 10, 12)),
+          throwsA(
+            isA<BlockedPeriodRuleViolation>().having(
+              (e) => e.error,
+              'error',
+              isA<BlockOverlapsConfirmedReservation>(),
+            ),
+          ),
+        );
+        expect(await repository.getBlockedPeriods(field), isEmpty);
+      },
+    );
+
+    test(
+      'rezervacija na čekanju, tuđeg terena ili otkazana ne smeta',
+      () async {
+        final repository = repositoryWith([
+          reservation(field, 10, ReservationStatus.pending),
+          reservation(other, 11, ReservationStatus.confirmed),
+          reservation(field, 12, ReservationStatus.cancelled),
+        ]);
+
+        final saved = await repository.addBlockedPeriod(block(field, 10, 14));
+
+        expect(saved.id, isNotNull);
+      },
+    );
+
+    test('kraj pre početka i prošli period se odbijaju', () async {
+      final repository = FakeFieldScheduleRepository(clock: () => before);
+
+      await expectLater(
+        repository.addBlockedPeriod(block(field, 12, 10)),
+        throwsA(isA<BlockedPeriodRuleViolation>()),
+      );
+      await expectLater(
+        repository.addBlockedPeriod(
+          BlockedPeriod(
+            fieldId: field,
+            startTime: DateTime(2026, 11, 18, 10),
+            endTime: DateTime(2026, 11, 18, 12),
+          ),
+        ),
+        throwsA(isA<BlockedPeriodRuleViolation>()),
+      );
+    });
+
+    test('brisanje uklanja blokadu samo sa njenog terena', () async {
+      final repository = FakeFieldScheduleRepository(clock: () => before);
+      final saved = await repository.addBlockedPeriod(block(field, 10, 12));
+
+      await expectLater(
+        repository.removeBlockedPeriod(other, saved.id!),
+        throwsA(isA<EntityNotFound>()),
+      );
+      expect(await repository.getBlockedPeriods(field), hasLength(1));
+
+      await repository.removeBlockedPeriod(field, saved.id!);
+      expect(await repository.getBlockedPeriods(field), isEmpty);
+      await expectLater(
+        repository.removeBlockedPeriod(field, saved.id!),
+        throwsA(isA<EntityNotFound>()),
+      );
     });
   });
 }

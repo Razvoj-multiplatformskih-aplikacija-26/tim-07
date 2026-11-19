@@ -1,8 +1,8 @@
-import 'package:backoffice/app.dart';
 import 'package:backoffice/data/backoffice_fake_repository.dart';
 import 'package:backoffice/data/backoffice_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support.dart';
 
 void main() {
   Future<void> pumpApp(
@@ -13,7 +13,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(BackofficeApp(repository: repository));
+    await tester.pumpWidget(backofficeApp(repository));
   }
 
   Future<void> chooseSimulation(WidgetTester tester, String item) async {
