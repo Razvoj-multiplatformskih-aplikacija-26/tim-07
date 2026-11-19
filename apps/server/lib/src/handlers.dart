@@ -300,10 +300,21 @@ final class TerenzoHandlers {
   }
 
   void _requireFieldValues(SaveFieldRequestDto body) {
-    if (body.name.trim().isEmpty) throw Refused.badRequest('name');
-    if (body.address.trim().isEmpty) throw Refused.badRequest('address');
-    if (body.city.trim().isEmpty) throw Refused.badRequest('city');
-    if (body.pricePerHour < 0) throw Refused.badRequest('pricePerHour');
+    final errors = validateFieldDetails(
+      name: body.name,
+      address: body.address,
+      city: body.city,
+      pricePerHour: body.pricePerHour,
+      contactPhone: body.contactPhone,
+    );
+    if (errors.isNotEmpty) {
+      throw Refused(
+        ErrorDto(
+          code: ErrorCodes.badRequest,
+          details: {ErrorDetailKeys.fields: [for (final error in errors) error.name]},
+        ),
+      );
+    }
   }
 }
 

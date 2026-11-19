@@ -29,6 +29,7 @@ export 'src/rules/field_approval.dart';
 export 'src/rules/field_schedule_validation.dart';
 export 'src/rules/occupancy.dart';
 export 'src/rules/staff_cancellation.dart';
+export 'src/rules/field_details_validation.dart';
 export 'src/rules/availability.dart';
 export 'src/rules/blocked_period_validation.dart';
 export 'src/rules/permissions.dart';
