@@ -11,10 +11,19 @@ import 'theme/backoffice_theme.dart';
 
 class BackofficeApp extends StatefulWidget {
   final ReservationRepository repository;
-  final SportsFieldRepository? fieldRepository;
+  final SportsFieldRepository fieldRepository;
+  final FieldScheduleRepository scheduleRepository;
   final AuthRepository? authRepository;
+  final AppUser? owner;
 
-  const BackofficeApp({super.key, required this.repository, this.fieldRepository, this.authRepository});
+  const BackofficeApp({
+    super.key,
+    required this.repository,
+    required this.fieldRepository,
+    required this.scheduleRepository,
+    this.authRepository,
+    this.owner,
+  }) : assert(authRepository != null || owner != null);
 
   @override
   State<BackofficeApp> createState() => _BackofficeAppState();
@@ -25,7 +34,7 @@ class _BackofficeAppState extends State<BackofficeApp> {
   late final ReservationSelectionBloc _selection = ReservationSelectionBloc();
   late final DirectoryCubit _directory = DirectoryCubit(
     fieldRepository: widget.fieldRepository,
-    initial: widget.fieldRepository == null ? BackofficeDirectory.demo() : null,
+    initial: BackofficeDirectory.demo(),
   );
   late final AuthBloc? _auth = switch (widget.authRepository) {
     final repository? => AuthBloc(repository: repository, app: ClientApp.backoffice)..add(const AuthStarted()),
@@ -35,7 +44,10 @@ class _BackofficeAppState extends State<BackofficeApp> {
   @override
   void initState() {
     super.initState();
-    if (_auth == null) _reservations.add(const ReservationsRequested());
+    if (_auth == null) {
+      _directory.load();
+      _reservations.add(const ReservationsRequested());
+    }
   }
 
   @override
@@ -57,15 +69,27 @@ class _BackofficeAppState extends State<BackofficeApp> {
     }
   }
 
+  Widget _workspace(AppUser owner) => BlocProvider(
+    key: ValueKey(owner.id),
+    create: (_) => BlockedPeriodsBloc(
+      fields: widget.fieldRepository,
+      schedules: widget.scheduleRepository,
+      reservations: widget.repository,
+      owner: owner,
+    )..add(const BlockedPeriodsStarted()),
+    child: const BackofficeShell(),
+  );
+
   @override
   Widget build(BuildContext context) {
     final auth = _auth;
     final home = auth == null
-        ? const BackofficeShell()
+        ? _workspace(widget.owner!)
         : BlocConsumer<AuthBloc, AuthState>(
             listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
             listener: _onAuthChanged,
-            builder: (context, state) => state is AuthAuthenticated ? const BackofficeShell() : const LoginScreen(),
+            builder: (context, state) =>
+                state is AuthAuthenticated ? _workspace(state.user) : const LoginScreen(),
           );
 
     return RepositoryProvider<ReservationRepository>.value(

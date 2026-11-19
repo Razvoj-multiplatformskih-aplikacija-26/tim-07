@@ -12,6 +12,7 @@ void main() {
     BackofficeApp(
       repository: HttpReservationRepository(api),
       fieldRepository: HttpFieldRepository(api),
+      scheduleRepository: HttpScheduleRepository(api),
       authRepository: HttpSessionRepository(api),
     ),
   );

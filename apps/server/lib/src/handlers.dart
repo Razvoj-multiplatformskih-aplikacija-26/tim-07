@@ -109,29 +109,18 @@ final class TerenzoHandlers {
 
   Future<Response> availability(Request request) async {
     final field = await _visibleField(request, optionalActorOf(request));
-    final date = _query(request, ApiQuery.date);
-    final day = parseBody(() => _localDay(date));
-    final slots = await terenzo.availability(field.id, day);
-    return json(
-      200,
-      AvailabilityDto(
-        fieldId: field.id.value,
-        date: date,
-        slots: [
-          for (final slot in slots)
-            SlotDto(
-              startTime: slot.startTime.toUtc(),
-              endTime: slot.endTime.toUtc(),
-              state: switch (slot.state) {
-                SlotState.free => SlotStateCodes.free,
-                SlotState.taken => SlotStateCodes.taken,
-                SlotState.blocked => SlotStateCodes.blocked,
-                SlotState.past => SlotStateCodes.past,
-              },
-            ),
-        ],
-      ).toJson(),
-    );
+    final day = parseBody(() => _localDay(_query(request, ApiQuery.date)));
+    final slots = await terenzo.getAvailability(fieldId: field.id, date: day);
+    return json(200, slots.toDto(fieldId: field.id, date: day).toJson());
+  }
+
+  Future<Response> removeBlockedPeriod(Request request) async {
+    final actor = actorOf(request);
+    final field = await _visibleField(request, actor);
+    if (!canManageField(actor, field)) throw const Refused.forbidden();
+    final id = parseBody(() => int.parse(request.rawPathParameters[#blockId]!));
+    await terenzo.removeBlockedPeriod(field.id, BlockedPeriodId(id));
+    return Response.noContent();
   }
 
   Future<Response> fieldsAwaitingApproval(Request request) async {

@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/data/mobile_auth.dart';
+import 'package:mobile/data/mobile_availability_repository.dart';
 import 'package:mobile/data/mobile_demo_data.dart';
 import 'package:mobile/data/mobile_field_repository.dart';
 import 'package:mobile/data/mobile_repository.dart';
+import 'package:mobile/data/mobile_schedule_repository.dart';
 import 'package:mobile/main.dart';
 
 void main() {
@@ -30,10 +32,17 @@ void main() {
       password: MobileDemoData.demoPassword,
     );
 
+    final reservations = createMobileRepository(delay: Duration.zero);
+
     await tester.pumpWidget(
       MyApp(
-        repository: createMobileRepository(delay: Duration.zero),
+        repository: reservations,
+        availabilityRepository: createMobileAvailabilityRepository(
+          reservations: reservations,
+          delay: Duration.zero,
+        ),
         fieldRepository: fieldRepository,
+        scheduleRepository: createMobileScheduleRepository(),
         authRepository: auth,
         initialLocation: location,
       ),

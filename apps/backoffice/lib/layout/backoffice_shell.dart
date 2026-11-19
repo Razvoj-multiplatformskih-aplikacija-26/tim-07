@@ -2,6 +2,7 @@ import 'package:blocs/blocs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../screens/blocked_periods_page.dart';
 import '../screens/placeholder_page.dart';
 import '../screens/reservations_page.dart';
 import '../widgets/simulation_menu.dart';
@@ -28,6 +29,11 @@ class _BackofficeShellState extends State<BackofficeShell> {
       selectedIcon: Icons.stadium,
     ),
     _Section(
+      label: 'Blokade',
+      icon: Icons.event_busy_outlined,
+      selectedIcon: Icons.event_busy,
+    ),
+    _Section(
       label: 'Statistika',
       icon: Icons.bar_chart_outlined,
       selectedIcon: Icons.bar_chart,
@@ -41,6 +47,7 @@ class _BackofficeShellState extends State<BackofficeShell> {
           title: 'Tereni',
           message: 'Upravljanje terenima biće dodato u narednim taskovima.',
         ),
+      2 => const BlockedPeriodsPage(),
       _ => const PlaceholderPage(
           title: 'Statistika',
           message: 'Statistika zauzetosti biće dodata u narednim taskovima.',

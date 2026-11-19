@@ -11,3 +11,5 @@ extension type const FieldId(int value) {}
 extension type const ReservationId(int value) {}
 
 extension type const ReviewId(int value) {}
+
+extension type const BlockedPeriodId(int value) {}

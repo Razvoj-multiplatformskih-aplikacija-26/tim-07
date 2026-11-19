@@ -25,6 +25,7 @@ Handler buildHandler(TerenzoHandlers handlers, SessionHandlers sessions, {requir
     ..put('${ApiPaths.fields}/:id/schedule', signedIn(handlers.replaceSchedule))
     ..get('${ApiPaths.fields}/:id/blocked-periods', optional(handlers.blockedPeriods))
     ..post('${ApiPaths.fields}/:id/blocked-periods', signedIn(handlers.addBlockedPeriod))
+    ..delete('${ApiPaths.fields}/:id/blocked-periods/:blockId', signedIn(handlers.removeBlockedPeriod))
     ..post('${ApiPaths.fields}/:id/review', signedIn(handlers.reviewField))
     ..get(ApiPaths.reservations, signedIn(handlers.reservations))
     ..post(ApiPaths.reservations, signedIn(handlers.createReservation))

@@ -1,5 +1,6 @@
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
+import 'package:messages/messages.dart';
 
 class MobileFakeReservationRepository implements ReservationRepository {
   final FakeReservationRepository _store;
@@ -12,6 +13,10 @@ class MobileFakeReservationRepository implements ReservationRepository {
     this._store, {
     this.delay = const Duration(milliseconds: 600),
   });
+
+  /// Rezervacije svih korisnika, bez kašnjenja i simulacije. Iz njih se
+  /// računaju slobodni termini.
+  FakeReservationRepository get store => _store;
 
   bool get failsNextRequest => _failNext;
 
@@ -28,7 +33,7 @@ class MobileFakeReservationRepository implements ReservationRepository {
 
     if (_failNext) {
       _failNext = false;
-      throw StateError('Server trenutno nije dostupan.');
+      throw const ServerUnreachableException();
     }
   }
 

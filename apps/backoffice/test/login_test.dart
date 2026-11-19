@@ -32,8 +32,14 @@ void main() {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
+    final reservations = createBackofficeRepository(delay: Duration.zero);
     await tester.pumpWidget(
-      BackofficeApp(repository: createBackofficeRepository(delay: Duration.zero), authRepository: auth),
+      BackofficeApp(
+        repository: reservations,
+        fieldRepository: createBackofficeFieldRepository(),
+        scheduleRepository: createBackofficeScheduleRepository(reservations: reservations),
+        authRepository: auth,
+      ),
     );
     await tester.pumpAndSettle();
   }

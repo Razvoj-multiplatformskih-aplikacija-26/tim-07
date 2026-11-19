@@ -58,6 +58,10 @@ String errorMessage(ErrorDto error) => switch (error.code) {
   ErrorCodes.slotTaken => 'Termin se preklapa sa postojećom rezervacijom.',
   ErrorCodes.fieldUnavailable =>
     'Teren trenutno nije dostupan za rezervisanje.',
+  ErrorCodes.invalidBlockRange => 'Kraj blokade mora biti posle početka.',
+  ErrorCodes.blockInPast => 'Blokada mora da obuhvata budući termin.',
+  ErrorCodes.blockOverlapsReservation =>
+    'U izabranom periodu već postoji potvrđena rezervacija.',
   ErrorCodes.forbidden => 'Nemate pravo na ovu radnju.',
   ErrorCodes.notFound => 'Traženi zapis nije pronađen.',
   ErrorCodes.unauthenticated => 'Prijavite se da biste nastavili.',
@@ -98,6 +102,7 @@ String validationMessage(ReservationValidationError error) =>
 /// samo poruku za korisnika.
 String describeError(Object error) => switch (error) {
   ReservationRuleViolation(:final error) => validationMessage(error),
+  BlockedPeriodRuleViolation(:final error) => errorMessage(error.toErrorDto()),
   ServerRejectedException(:final error) => errorMessage(error),
   ServerUnreachableException() => serverUnreachableMessage,
   EntityNotFound() => errorMessage(const ErrorDto(code: ErrorCodes.notFound)),

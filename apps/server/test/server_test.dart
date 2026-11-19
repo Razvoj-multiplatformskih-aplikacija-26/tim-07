@@ -337,6 +337,37 @@ void main() {
     });
   });
 
+  group('blokiranje termina', () {
+    test('an owner blocks and unblocks a slot; a block over a confirmed reservation is refused', () async {
+      final owner = await logIn('vlasnik1@terenzo.rs');
+      final user = await logIn('korisnik2@terenzo.rs');
+      final basket = await fieldId('Basket Park');
+      final booked = reservationOf(await reserve(user, basket, day(18, 18), day(18, 19)));
+      expect(booked.status, ReservationStatusCodes.confirmed);
+
+      final overBooking = await act(
+        owner,
+        ApiPaths.blockedPeriods(basket),
+        body: CreateBlockedPeriodRequestDto(startTime: day(18, 17), endTime: day(18, 20), reason: 'Turnir').toJson(),
+      );
+      final free = await act(
+        owner,
+        ApiPaths.blockedPeriods(basket),
+        body: CreateBlockedPeriodRequestDto(startTime: day(18, 8), endTime: day(18, 10), reason: 'Održavanje').toJson(),
+      );
+      final block = BlockedPeriodDto.fromJson(jsonDecode(free.body) as Map<String, Object?>);
+      final reserveBlocked = await reserve(user, basket, day(18, 9), day(18, 10));
+      final removed = await http.delete(base.replace(path: ApiPaths.blockedPeriod(basket, block.id!)), headers: as(owner));
+      final afterRemoval = await reserve(user, basket, day(18, 9), day(18, 10));
+
+      expect((overBooking.statusCode, codeOf(overBooking)), (409, ErrorCodes.blockOverlapsReservation));
+      expect(free.statusCode, 201);
+      expect(codeOf(reserveBlocked), ErrorCodes.fieldBlocked);
+      expect(removed.statusCode, 204);
+      expect(afterRemoval.statusCode, 201);
+    });
+  });
+
   group('ugovor i pregledač', () {
     test('the public catalog works without signing in and pages with total', () async {
       final answer = await http.get(base.replace(path: ApiPaths.fields, queryParameters: {ApiQuery.limit: '2'}));

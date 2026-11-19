@@ -125,6 +125,21 @@ WeekDay? weekDayFromCode(String code) => switch (code) {
   _ => null,
 };
 
+String slotStateToCode(SlotState value) => switch (value) {
+  SlotState.free => SlotStateCodes.free,
+  SlotState.taken => SlotStateCodes.taken,
+  SlotState.blocked => SlotStateCodes.blocked,
+  SlotState.past => SlotStateCodes.past,
+};
+
+SlotState? slotStateFromCode(String code) => switch (code) {
+  SlotStateCodes.free => SlotState.free,
+  SlotStateCodes.taken => SlotState.taken,
+  SlotStateCodes.blocked => SlotState.blocked,
+  SlotStateCodes.past => SlotState.past,
+  _ => null,
+};
+
 String statsPeriodToCode(StatsPeriodKind value) => switch (value) {
   StatsPeriodKind.week => StatsPeriodCodes.week,
   StatsPeriodKind.month => StatsPeriodCodes.month,

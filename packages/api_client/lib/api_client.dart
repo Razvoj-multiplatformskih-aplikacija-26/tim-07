@@ -4,6 +4,7 @@
 // Koristi samo `package:http`, bez `dart:io`.
 
 export 'src/api_client.dart' show ApiClient, isNotFound;
+export 'src/http_availability_repository.dart';
 export 'src/http_field_repository.dart';
 export 'src/http_reservation_repository.dart';
 export 'src/http_schedule_repository.dart';

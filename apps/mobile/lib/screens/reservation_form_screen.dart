@@ -5,10 +5,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:messages/messages.dart';
 
 import '../auth/current_user.dart';
-import '../data/mobile_demo_data.dart';
 import '../text/reservation_texts.dart';
 
-class ReservationFormScreen extends StatefulWidget {
+/// Forma za novu rezervaciju (`/fields/:fieldId/reserve`).
+///
+/// Provera termina i slanje su u `ReservationFormBloc`-u; ekran šalje događaje
+/// i crta stanje. Bez prijavljenog korisnika (prijava je upravo istekla) ostaje
+/// prazan dok router ne vrati na prijavu.
+class ReservationFormScreen extends StatelessWidget {
   final SportsField field;
   final DateTime date;
   final String initialStart;
@@ -23,247 +27,254 @@ class ReservationFormScreen extends StatefulWidget {
   });
 
   @override
-  State<ReservationFormScreen> createState() => _ReservationFormScreenState();
+  Widget build(BuildContext context) {
+    final user = context.watchUser;
+    if (user == null) return const SizedBox.shrink();
+
+    return BlocProvider(
+      // Drugi korisnik na istom ekranu dobija novu formu, ne tuđe podatke.
+      key: ValueKey(user.id),
+      create: (context) => ReservationFormBloc(
+        reservations: context.read<ReservationRepository>(),
+        schedules: context.read<FieldScheduleRepository>(),
+        field: field,
+        userId: user.id,
+        date: date,
+        initialStart: initialStart,
+        initialEnd: initialEnd,
+      )..add(const ReservationFormStarted()),
+      child: _ReservationFormView(field: field, date: date, user: user),
+    );
+  }
 }
 
-class _ReservationFormScreenState extends State<ReservationFormScreen> {
+class _ReservationFormView extends StatefulWidget {
+  final SportsField field;
+  final DateTime date;
+  final AppUser user;
+
+  const _ReservationFormView({
+    required this.field,
+    required this.date,
+    required this.user,
+  });
+
+  @override
+  State<_ReservationFormView> createState() => _ReservationFormViewState();
+}
+
+class _ReservationFormViewState extends State<_ReservationFormView> {
   static const _formatHint = 'Unesite vreme u obliku HH:mm, na primer 18:00.';
 
-  final _formKey = GlobalKey<FormState>();
+  // Tekst u poljima pripada ekranu, a provera i slanje Bloc-u.
+  late final TextEditingController _start;
+  late final TextEditingController _end;
 
-  late final _startController = TextEditingController(
-    text: widget.initialStart,
-  );
-  late final _endController = TextEditingController(text: widget.initialEnd);
-  late final _nameController = TextEditingController(
-    text: context.readUser?.fullName ?? '',
-  );
-
-  bool _submitting = false;
+  @override
+  void initState() {
+    super.initState();
+    final state = context.read<ReservationFormBloc>().state;
+    _start = TextEditingController(text: state.startText);
+    _end = TextEditingController(text: state.endText);
+  }
 
   @override
   void dispose() {
-    _startController.dispose();
-    _endController.dispose();
-    _nameController.dispose();
+    _start.dispose();
+    _end.dispose();
     super.dispose();
   }
 
-  DateTime? _parseTime(String? text) {
-    final match = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*$').firstMatch(text ?? '');
-    if (match == null) {
-      return null;
-    }
-
-    final hour = int.parse(match.group(1)!);
-    final minute = int.parse(match.group(2)!);
-    if (hour > 23 || minute > 59) {
-      return null;
-    }
-
-    return DateTime(
-      widget.date.year,
-      widget.date.month,
-      widget.date.day,
-      hour,
-      minute,
-    );
-  }
-
-  String? _formatError(String? text) =>
-      _parseTime(text) == null ? _formatHint : null;
-
-  // Pravila dolaze iz paketa domain; aplikacija samo bira tekst poruke.
-  String? _slotError() {
-    final start = _parseTime(_startController.text);
-    final end = _parseTime(_endController.text);
-    if (start == null || end == null) {
-      return null;
-    }
-
-    final user = context.readUser;
-    if (user == null) {
-      return null;
-    }
-
-    final state = context.read<ReservationBloc>().state;
-    final known = state is ReservationLoaded
-        ? state.reservations
-        : const <Reservation>[];
-
-    final error = validateReservationSlot(
-      fieldId: widget.field.id,
-      userId: user.id,
-      startTime: start,
-      endTime: end,
-      now: DateTime.now(),
-      existingReservations: known,
-      schedules: MobileDemoData.schedules,
-    );
-
-    return error == null ? null : validationMessage(error);
-  }
-
-  int? get _price {
-    final start = _parseTime(_startController.text);
-    final end = _parseTime(_endController.text);
-    if (start == null || end == null) {
-      return null;
-    }
-
-    return calculateReservationPrice(
-      pricePerHour: widget.field.pricePerHour,
-      startTime: start,
-      endTime: end,
-    );
-  }
-
-  void _onTimeChanged(String _) {
-    _formKey.currentState?.validate();
-    setState(() {});
-  }
-
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  void confirmReservation() {
-    final user = context.readUser;
-    if (user == null || _submitting || !_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() => _submitting = true);
-
-    context.read<ReservationBloc>().add(
-      ReservationCreateRequested(
-        fieldId: widget.field.id,
-        userId: user.id,
-        startTime: _parseTime(_startController.text)!,
-        endTime: _parseTime(_endController.text)!,
-      ),
-    );
-  }
-
-  void _onReservationState(BuildContext context, ReservationState state) {
-    if (!_submitting) {
-      return;
-    }
+  void _onState(BuildContext context, ReservationFormState state) {
+    final messenger = ScaffoldMessenger.of(context);
 
     switch (state) {
-      case ReservationLoaded() || ReservationEmpty():
-        setState(() => _submitting = false);
-        _showMessage('Rezervacija je uspešno kreirana!');
+      case ReservationFormSucceeded():
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Rezervacija je uspešno kreirana!')),
+        );
+        // Spisak mojih rezervacija se osvežava sa novom rezervacijom.
+        context.read<ReservationBloc>().add(
+          UserReservationsRequested(widget.user.id),
+        );
         Navigator.of(context).pop();
-      case ReservationError(:final message):
-        setState(() => _submitting = false);
-        _showMessage(errorDetails(message));
-      case ReservationInitial() || ReservationLoading():
+      case ReservationFormRejected(:final message) ||
+          ReservationFormFailed(:final message):
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(message)));
+      default:
         break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final price = _price;
+    final bloc = context.read<ReservationFormBloc>();
 
-    return BlocListener<ReservationBloc, ReservationState>(
-      listener: _onReservationState,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Nova rezervacija')),
-        body: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: ListView(
+    return BlocConsumer<ReservationFormBloc, ReservationFormState>(
+      listener: _onState,
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Nova rezervacija')),
+          body: switch (state) {
+            ReservationFormLoading() => const Center(
+              child: CircularProgressIndicator(),
+            ),
+            ReservationFormLoadFailed(:final message) => _LoadFailed(
+              message: message,
+              onRetry: () => bloc.add(const ReservationFormStarted()),
+            ),
+            _ => _form(context, bloc, state),
+          },
+        );
+      },
+    );
+  }
+
+  Widget _form(
+    BuildContext context,
+    ReservationFormBloc bloc,
+    ReservationFormState state,
+  ) {
+    final theme = Theme.of(context);
+    final submitting = state is ReservationFormSubmitting;
+    final editing = state is ReservationFormEditing ? state : null;
+    final price = editing?.price;
+
+    // Poruka o odbijanju ostaje na ekranu dok korisnik ne izmeni unos.
+    final notice = switch (state) {
+      ReservationFormRejected(:final message) ||
+      ReservationFormFailed(:final message) => message,
+      _ => null,
+    };
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('Detalji rezervacije', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
             padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                'Detalji rezervacije',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.field.name,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      Text('Datum: ${formatDate(widget.date)}'),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Cena: ${price == null ? '-' : formatPrice(price)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.field.name, style: theme.textTheme.titleMedium),
+                const SizedBox(height: 12),
+                Text('Datum: ${formatDate(widget.date)}'),
+                const SizedBox(height: 8),
+                Text(
+                  'Cena: ${price == null ? '-' : formatPrice(price)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text('Termin', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _startController,
-                keyboardType: TextInputType.datetime,
-                onChanged: _onTimeChanged,
-                validator: _formatError,
-                decoration: const InputDecoration(
-                  labelText: 'Početak (HH:mm)',
-                  prefixIcon: Icon(Icons.schedule),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _endController,
-                keyboardType: TextInputType.datetime,
-                onChanged: _onTimeChanged,
-                validator: (value) => _formatError(value) ?? _slotError(),
-                decoration: const InputDecoration(
-                  labelText: 'Kraj (HH:mm)',
-                  prefixIcon: Icon(Icons.schedule),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Podaci za rezervaciju',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Ime i prezime',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
-                  helperText: 'Prijavljeni demo korisnik',
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _submitting ? null : confirmReservation,
-                icon: _submitting
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check_circle_outline),
-                label: Text(
-                  _submitting ? 'Slanje rezervacije...' : 'Potvrdi rezervaciju',
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ),
+        const SizedBox(height: 24),
+        Text('Termin', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _start,
+          enabled: !submitting,
+          keyboardType: TextInputType.datetime,
+          onChanged: (text) => bloc.add(ReservationFormStartChanged(text)),
+          decoration: InputDecoration(
+            labelText: 'Početak (HH:mm)',
+            prefixIcon: const Icon(Icons.schedule),
+            border: const OutlineInputBorder(),
+            errorText: editing?.startInvalid == true ? _formatHint : null,
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _end,
+          enabled: !submitting,
+          keyboardType: TextInputType.datetime,
+          onChanged: (text) => bloc.add(ReservationFormEndChanged(text)),
+          decoration: InputDecoration(
+            labelText: 'Kraj (HH:mm)',
+            prefixIcon: const Icon(Icons.schedule),
+            border: const OutlineInputBorder(),
+            errorText: editing == null
+                ? null
+                : editing.endInvalid
+                ? _formatHint
+                : editing.slotError == null
+                ? null
+                : validationMessage(editing.slotError!),
+          ),
+        ),
+        if (notice != null) ...[
+          const SizedBox(height: 16),
+          // Poruka je u živoj oblasti, da je čitač ekrana pročita.
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              notice,
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        Text('Podaci za rezervaciju', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 16),
+        TextFormField(
+          initialValue: widget.user.fullName,
+          readOnly: true,
+          decoration: const InputDecoration(
+            labelText: 'Ime i prezime',
+            prefixIcon: Icon(Icons.person_outline),
+            border: OutlineInputBorder(),
+            helperText: 'Prijavljeni korisnik',
+          ),
+        ),
+        const SizedBox(height: 24),
+        FilledButton.icon(
+          onPressed: submitting
+              ? null
+              : () => bloc.add(const ReservationFormSubmitted()),
+          icon: submitting
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.check_circle_outline),
+          label: Text(
+            submitting ? 'Slanje rezervacije...' : 'Potvrdi rezervaciju',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LoadFailed extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadFailed({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Pokušaj ponovo'),
+            ),
+          ],
         ),
       ),
     );
