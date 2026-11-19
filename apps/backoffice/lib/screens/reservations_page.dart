@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +16,15 @@ import '../widgets/reservations_table.dart';
 import '../widgets/shortcut_hints.dart';
 
 class ReservationsPage extends StatefulWidget {
-  const ReservationsPage({super.key});
+  /// Koliko često se lista sama osvežava dok je stranica otvorena (odluka 7):
+  /// promena iz drugog klijenta (nova rezervacija iz mobilne aplikacije) se
+  /// vidi bez ručnog osvežavanja.
+  final Duration refreshEvery;
+
+  const ReservationsPage({
+    super.key,
+    this.refreshEvery = const Duration(seconds: 30),
+  });
 
   static const wideBreakpoint = 900.0;
 
@@ -28,9 +38,29 @@ class _ReservationsPageState extends State<ReservationsPage> {
   bool _tableFocused = false;
   bool _isWide = true;
   bool _narrowDetailsOpen = false;
+  late final Timer _refresh;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh = Timer.periodic(widget.refreshEvery, (_) => _autoRefresh());
+  }
+
+  /// Osvežava u pozadini: dok se nešto već učitava ne pravi novi zahtev, a
+  /// posle greške ovo je i ponovni pokušaj čim server proradi.
+  void _autoRefresh() {
+    if (!mounted) return;
+    final bloc = context.read<ReservationListBloc>();
+    if (bloc.state is ReservationListLoading) return;
+    if (bloc.state case ReservationListLoaded(:final refreshing) when refreshing) {
+      return;
+    }
+    bloc.add(const ReservationListRefreshed());
+  }
 
   @override
   void dispose() {
+    _refresh.cancel();
     _tableFocus.dispose();
     _actionsFocus.dispose();
     super.dispose();

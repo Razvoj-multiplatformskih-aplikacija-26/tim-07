@@ -214,9 +214,13 @@ Server nikad ne šalje gotovu poruku za korisnika, već **kod i podatke**:
 | 400 | `bad_request` | neispravan JSON ili parametar |
 | 401 | `unauthenticated`, `invalid_token`, `token_expired`, `invalid_credentials` | — |
 | 403 | `forbidden` | prava iz odluke 9 |
+| 403 | `account_deactivated` | — (odluka 20) |
 | 404 | `not_found` | — |
 | 409 | `slot_taken` | `SlotAlreadyTaken` |
 | 409 | `invalid_status_transition` | `InvalidReservationStatus` |
+| 409 | `invalid_approval_transition` | `ApprovalTransitionNotAllowed` |
+| 409 | `block_overlaps_reservation` | `BlockOverlapsConfirmedReservation` (odluka 15) |
+| 422 | `invalid_block_range`, `block_in_past` | `InvalidBlockRange`, `BlockInPast` |
 | 422 | `invalid_time_range` | `InvalidTimeRange` |
 | 422 | `reservation_in_past` | `ReservationInPast` |
 | 422 | `outside_working_hours` | `OutsideWorkingHours` |
@@ -227,6 +231,8 @@ Server nikad ne šalje gotovu poruku za korisnika, već **kod i podatke**:
 | 500 | `internal` | neočekivana greška (detalji samo u logu servera) |
 
 Poruku na srpskom pravi klijent iz koda, istom funkcijom kao kada pravilo proveri lokalno. Nepoznat kod daje opštu poruku („Došlo je do greške. Pokušajte ponovo.“). Konkretan oblik DTO-a definiše `packages/contract` (T40), a prevod `packages/mapping` (T41). Poruke na srpskom pravi `packages/messages` (T42): jedna funkcija `errorMessage(ErrorDto)` koju koristi i lokalna provera pravila (`validationMessage`) i greška sa servera, pa korisnik vidi istu poruku. Broj sati u poruci dolazi iz `details`, ne iz aplikacije, pa server koji promeni rok menja poruku bez nove verzije aplikacije. HTTP repozitorijume pišu `packages/api_client` (T43): isti kod na VM-u i u pregledaču, sve greške stižu kao `ServerRejectedException` ili `ServerUnreachableException`.
+
+**Odbačeno.** *Server šalje gotovu poruku na srpskom.* Jednostavnije za klijenta, ali server tada zna jezik i tekst svih ekrana, stara verzija aplikacije prikazuje tekst koji ne odgovara njenom ekranu, a ista greška bi izgledala drugačije kada je pravilo proverio klijent. *HTTP status kao jedini nosilac greške.* `409` ne kaže da li je termin zauzet ili je promenjeno stanje, pa klijent ne bi umeo da izabere poruku.
 
 ## 14. Statistika zauzetosti
 
