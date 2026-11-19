@@ -154,3 +154,20 @@ StatsPeriodKind? statsPeriodFromCode(String code) => switch (code) {
 /// Vraća vrednost ili baca [UnknownCodeException].
 T requireKnown<T>(T? value, String kind, String code) =>
     value ?? (throw UnknownCodeException(kind, code));
+
+String reservationSortKeyToCode(ReservationSortKey value) => switch (value) {
+  ReservationSortKey.id => ReservationSortCodes.id,
+  ReservationSortKey.field => ReservationSortCodes.field,
+  ReservationSortKey.user => ReservationSortCodes.user,
+  ReservationSortKey.startTime => ReservationSortCodes.start,
+  ReservationSortKey.status => ReservationSortCodes.status,
+};
+
+ReservationSortKey? reservationSortKeyFromCode(String code) => switch (code) {
+  ReservationSortCodes.id => ReservationSortKey.id,
+  ReservationSortCodes.field => ReservationSortKey.field,
+  ReservationSortCodes.user => ReservationSortKey.user,
+  ReservationSortCodes.start => ReservationSortKey.startTime,
+  ReservationSortCodes.status => ReservationSortKey.status,
+  _ => null,
+};

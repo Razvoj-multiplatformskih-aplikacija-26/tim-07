@@ -389,6 +389,93 @@ void main() {
       expect(offsets, ['0', '2', '4']);
     });
 
+    test('pretraga šalje filtere, sortiranje i stranu serveru', () async {
+      late Uri seen;
+      final api = clientFor(
+        MockClient((request) async {
+          seen = request.url;
+          return jsonResponse(200, {
+            'items': [reservationJson()],
+            'total': 87,
+            'limit': 20,
+            'offset': 40,
+          });
+        }),
+        session: await signedIn(),
+      );
+
+      final result = await HttpReservationRepository(api).searchReservations(
+        ReservationQuery(
+          fieldId: const FieldId(3),
+          status: ReservationStatus.pending,
+          fromDate: DateTime(2026, 12, 1, 17),
+          toDate: DateTime(2026, 12, 31),
+          search: '  Petrović ',
+          sortKey: ReservationSortKey.user,
+          ascending: false,
+          offset: 40,
+        ),
+      );
+
+      expect(result.total, 87);
+      expect(result.offset, 40);
+      expect(result.hasMore, isTrue);
+      expect(seen.queryParameters, {
+        'fieldId': '3',
+        'status': 'pending',
+        'from': '2026-12-01',
+        'to': '2026-12-31',
+        'search': 'Petrović',
+        'sort': 'user',
+        'order': 'desc',
+        'limit': '20',
+        'offset': '40',
+      });
+    });
+
+    test('pretraga bez filtera šalje samo sortiranje i stranu', () async {
+      late Uri seen;
+      final api = clientFor(
+        MockClient((request) async {
+          seen = request.url;
+          return jsonResponse(200, page([reservationJson()]));
+        }),
+        session: await signedIn(),
+      );
+
+      await HttpReservationRepository(
+        api,
+      ).searchReservations(const ReservationQuery());
+
+      expect(seen.queryParameters, {
+        'sort': 'start',
+        'order': 'asc',
+        'limit': '20',
+        'offset': '0',
+      });
+    });
+
+    test('pretraga preskače rezervaciju sa nepoznatim stanjem', () async {
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(
+            200,
+            page([
+              reservationJson(id: 1),
+              reservationJson(id: 2, status: 'no_show'),
+            ]),
+          ),
+        ),
+        session: await signedIn(),
+      );
+
+      final result = await HttpReservationRepository(
+        api,
+      ).searchReservations(const ReservationQuery());
+
+      expect(result.items.map((r) => r.id.value), [1]);
+    });
+
     test('jedna strana nosi ukupan broj za tabelu', () async {
       late Uri seen;
       final api = clientFor(

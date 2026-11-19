@@ -7,6 +7,7 @@ class ShortcutHints extends StatelessWidget {
     ('↑ ↓', 'kretanje'),
     ('Home / End', 'prva / poslednja'),
     ('Enter', 'akcije'),
+    ('PgUp / PgDn', 'strana'),
     ('P', 'potvrdi'),
     ('O', 'odbij / otkaži'),
     ('R', 'osveži'),

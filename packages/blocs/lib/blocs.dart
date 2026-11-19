@@ -22,3 +22,4 @@ export 'src/field_management/field_management_bloc.dart';
 export 'src/calendar/calendar_bloc.dart';
 export 'src/statistics/statistics_bloc.dart';
 export 'src/field_review/field_review_bloc.dart';
+export 'src/reservation_list/reservation_list_bloc.dart';

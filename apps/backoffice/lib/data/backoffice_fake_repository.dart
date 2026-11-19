@@ -1,7 +1,8 @@
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 
-class BackofficeFakeReservationRepository implements ReservationRepository {
+class BackofficeFakeReservationRepository
+    implements ReservationRepository, ReservationSearchRepository {
   final FakeReservationRepository _store;
   final Duration delay;
 
@@ -46,6 +47,27 @@ class BackofficeFakeReservationRepository implements ReservationRepository {
     }
 
     return _store.getReservations();
+  }
+
+  /// Strana tabele rezervacija. Prolazi kroz istu simulaciju mreže kao ostala
+  /// čitanja, pa „greška“ i „prazan odgovor“ iz menija važe i za tabelu.
+  @override
+  Future<PagedResult<Reservation>> searchReservations(
+    ReservationQuery query,
+  ) async {
+    await _simulateNetwork();
+
+    if (_emptyNext) {
+      _emptyNext = false;
+      return PagedResult(
+        items: const <Reservation>[],
+        total: 0,
+        limit: query.limit,
+        offset: query.offset,
+      );
+    }
+
+    return _store.searchReservations(query);
   }
 
   @override

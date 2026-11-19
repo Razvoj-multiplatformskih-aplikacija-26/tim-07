@@ -83,6 +83,14 @@ void main() {
       expect(roleToCode(UserRole.owner), 'owner');
     });
 
+    test('kolone sortiranja imaju stabilne kodove i vraćaju se iste', () {
+      for (final v in ReservationSortKey.values) {
+        expect(reservationSortKeyFromCode(reservationSortKeyToCode(v)), v);
+      }
+      expect(reservationSortKeyToCode(ReservationSortKey.startTime), 'start');
+      expect(reservationSortKeyFromCode('price'), isNull);
+    });
+
     test('nepoznat kod daje null, a requireKnown baca izuzetak', () {
       expect(reservationStatusFromCode('no_show'), isNull);
       expect(sportFromCode('curling'), isNull);
