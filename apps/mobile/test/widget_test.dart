@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/data/mobile_auth.dart';
 import 'package:mobile/data/mobile_demo_data.dart';
+import 'package:mobile/data/mobile_field_repository.dart';
 import 'package:mobile/data/mobile_fake_repository.dart';
 import 'package:mobile/data/mobile_repository.dart';
 import 'package:mobile/main.dart';
@@ -27,6 +28,7 @@ void main() {
     await tester.pumpWidget(
       MyApp(
         repository: repository,
+        fieldRepository: createMobileFieldRepository(delay: Duration.zero),
         authRepository: auth,
         initialLocation: location,
       ),

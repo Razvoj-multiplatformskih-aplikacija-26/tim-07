@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:messages/messages.dart';
 
 import 'data/mobile_auth.dart';
+import 'data/mobile_field_repository.dart';
 import 'data/mobile_repository.dart';
 import 'navigation/app_router.dart';
 import 'theme/app_theme.dart';
@@ -14,6 +15,7 @@ void main() {
   runApp(
     MyApp(
       repository: createMobileRepository(),
+      fieldRepository: createMobileFieldRepository(),
       authRepository: createMobileAuthRepository(),
     ),
   );
@@ -21,6 +23,7 @@ void main() {
 
 class MyApp extends StatefulWidget {
   final ReservationRepository repository;
+  final SportsFieldRepository fieldRepository;
   final AuthRepository authRepository;
 
   /// Adresa na kojoj aplikacija počinje (za testove i duboke linkove).
@@ -29,6 +32,7 @@ class MyApp extends StatefulWidget {
   const MyApp({
     super.key,
     required this.repository,
+    required this.fieldRepository,
     required this.authRepository,
     this.initialLocation = '/',
   });
@@ -49,6 +53,11 @@ class _MyAppState extends State<MyApp> {
     repository: widget.repository,
   );
 
+  // Katalog je javan, pa se učitava čim se aplikacija pokrene.
+  late final FieldsBloc _fields = FieldsBloc(
+    repository: widget.fieldRepository,
+  )..add(const FieldsRequested());
+
   late final AuthRefresh _refresh = AuthRefresh(_auth.stream);
 
   late final GoRouter _router = AppRouter.create(
@@ -62,6 +71,7 @@ class _MyAppState extends State<MyApp> {
     _router.dispose();
     _refresh.dispose();
     _reservations.close();
+    _fields.close();
     _auth.close();
     super.dispose();
   }
@@ -95,12 +105,20 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return RepositoryProvider<ReservationRepository>.value(
-      value: widget.repository,
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<ReservationRepository>.value(
+          value: widget.repository,
+        ),
+        RepositoryProvider<SportsFieldRepository>.value(
+          value: widget.fieldRepository,
+        ),
+      ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider.value(value: _auth),
           BlocProvider.value(value: _reservations),
+          BlocProvider.value(value: _fields),
         ],
         child: MultiBlocListener(
           listeners: [

@@ -5,7 +5,6 @@ import 'package:domain/domain.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
-import '../data/mobile_demo_data.dart';
 import '../screens/field_details_screen.dart';
 import '../screens/fields_screen.dart';
 import '../screens/home_screen.dart';
@@ -14,6 +13,7 @@ import '../screens/reservation_details_screen.dart';
 import '../screens/reservation_form_screen.dart';
 import '../screens/reservations_screen.dart';
 import '../screens/sign_in_screen.dart';
+import '../widgets/field_loader.dart';
 import 'main_navigation.dart';
 
 /// Adrese ekrana:
@@ -65,28 +65,32 @@ class AppRouter {
                   GoRoute(
                     path: ':fieldId',
                     builder: (context, state) {
-                      final field = _field(state);
+                      final id = _fieldId(state);
 
-                      if (field == null) {
+                      if (id == null) {
                         return const MessageScreen(
                           title: 'Detalji terena',
                           message: 'Teren nije pronađen.',
                         );
                       }
 
-                      return FieldDetailsScreen(field: field);
+                      return FieldLoader(
+                        fieldId: id,
+                        title: 'Detalji terena',
+                        builder: (field) => FieldDetailsScreen(field: field),
+                      );
                     },
                     routes: [
                       GoRoute(
                         path: 'reserve',
                         builder: (context, state) {
-                          final field = _field(state);
+                          final id = _fieldId(state);
                           final query = state.uri.queryParameters;
                           final date = DateTime.tryParse(query['date'] ?? '');
                           final start = query['start'];
                           final end = query['end'];
 
-                          if (field == null ||
+                          if (id == null ||
                               date == null ||
                               start == null ||
                               end == null) {
@@ -96,11 +100,15 @@ class AppRouter {
                             );
                           }
 
-                          return ReservationFormScreen(
-                            field: field,
-                            date: date,
-                            initialStart: start,
-                            initialEnd: end,
+                          return FieldLoader(
+                            fieldId: id,
+                            title: 'Nova rezervacija',
+                            builder: (field) => ReservationFormScreen(
+                              field: field,
+                              date: date,
+                              initialStart: start,
+                              initialEnd: end,
+                            ),
                           );
                         },
                       ),
@@ -174,10 +182,10 @@ class AppRouter {
     return Uri.parse(from).path == '/login' ? '/' : from;
   }
 
-  static SportsField? _field(GoRouterState state) {
+  static FieldId? _fieldId(GoRouterState state) {
     final id = int.tryParse(state.pathParameters['fieldId'] ?? '');
 
-    return id == null ? null : MobileDemoData.fieldById(FieldId(id));
+    return id == null ? null : FieldId(id);
   }
 }
 
