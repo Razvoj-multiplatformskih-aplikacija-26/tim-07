@@ -1,5 +1,6 @@
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
+import 'package:messages/messages.dart';
 
 class MobileFakeReservationRepository implements ReservationRepository {
   final FakeReservationRepository _store;
@@ -32,7 +33,7 @@ class MobileFakeReservationRepository implements ReservationRepository {
 
     if (_failNext) {
       _failNext = false;
-      throw StateError('Server trenutno nije dostupan.');
+      throw const ServerUnreachableException();
     }
   }
 
