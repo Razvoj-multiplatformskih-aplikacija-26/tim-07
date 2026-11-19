@@ -354,6 +354,31 @@ void main() {
       expect(await store.read(), isNull);
     });
 
+    test('deaktiviran nalog sa važećim tokenom: prijava se briše', () async {
+      final store = await signedIn();
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(403, errorBody('account_deactivated')),
+        ),
+        session: store,
+      );
+      final expired = expectLater(api.expirations, emits(anything));
+
+      await expectLater(
+        HttpReservationRepository(api).getReservations(),
+        throwsA(
+          isA<ServerRejectedException>().having(
+            (e) => describeError(e),
+            'message',
+            'Nalog je deaktiviran. Obratite se administratoru.',
+          ),
+        ),
+      );
+
+      await expired;
+      expect(await store.read(), isNull);
+    });
+
     test('403 je odbijena radnja, ne istek: prijava ostaje', () async {
       final store = await signedIn();
       final api = clientFor(

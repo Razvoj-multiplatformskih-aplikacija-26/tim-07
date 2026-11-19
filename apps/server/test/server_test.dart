@@ -270,7 +270,7 @@ void main() {
     test('the owner of the field sees who booked, and the user sees his own reservation without that block', () async {
       final user = await logIn('korisnik1@terenzo.rs');
       final owner = await logIn('vlasnik1@terenzo.rs');
-      final created = reservationOf(await reserve(user, await fieldId('Arena Fudbal'), day(16, 10), day(16, 11)));
+      final created = reservationOf(await reserve(user, await fieldId('Arena Fudbal'), day(19, 12), day(19, 13)));
 
       final seenByUser = await http.get(base.replace(path: ApiPaths.reservation(created.id)), headers: as(user));
       final seenByOwner = await http.get(base.replace(path: ApiPaths.reservation(created.id)), headers: as(owner));
@@ -495,7 +495,7 @@ void main() {
       expect(off.statusCode, 200);
       expect(UserDto.fromJson(jsonDecode(off.body) as Map<String, Object?>).isActive, isFalse);
       expect((login.statusCode, codeOf(login)), (403, ErrorCodes.accountDeactivated));
-      expect((old.statusCode, codeOf(old)), (401, ErrorCodes.accountDeactivated));
+      expect((old.statusCode, codeOf(old)), (403, ErrorCodes.accountDeactivated));
     });
 
     test('a wrong password on a deactivated account does not reveal that it is deactivated', () async {
