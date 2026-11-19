@@ -1159,6 +1159,104 @@ void main() {
     );
   });
 
+  group('nalozi za administratora', () {
+    Map<String, Object?> userJson({int id = 4, bool? isActive}) => {
+      'id': id,
+      'firstName': 'Jovan',
+      'lastName': 'Petrović',
+      'email': 'jovan@example.com',
+      'role': 'user',
+      'phoneNumber': '060',
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'isActive': ?isActive,
+    };
+
+    test('spisak se traži po ulozi i čita sa svim stranama', () async {
+      final seen = <Uri>[];
+      final api = clientFor(
+        MockClient((request) async {
+          seen.add(request.url);
+          return jsonResponse(
+            200,
+            page([userJson(isActive: true), userJson(id: 5, isActive: false)]),
+          );
+        }),
+        session: await signedIn(),
+      );
+
+      final users = await HttpUserRepository(api).getUsers(role: UserRole.user);
+
+      expect(users.map((u) => u.id.value), [4, 5]);
+      expect(users.map((u) => u.isActive), [true, false]);
+      expect(users.first.phoneNumber, '060');
+      expect(seen.single.path, '/users');
+      expect(seen.single.queryParameters['role'], 'user');
+    });
+
+    test('deaktivacija šalje PATCH sa novim stanjem', () async {
+      late http.Request seen;
+      final api = clientFor(
+        MockClient((request) async {
+          seen = request;
+          return jsonResponse(200, userJson(isActive: false));
+        }),
+        session: await signedIn(),
+      );
+
+      final user = await HttpUserRepository(
+        api,
+      ).setUserActive(const UserId(4), active: false);
+
+      expect(seen.method, 'PATCH');
+      expect(seen.url.path, '/users/4');
+      expect(jsonDecode(seen.body), {'isActive': false});
+      expect(user.isActive, isFalse);
+    });
+
+    test('vlasnik dobija 403, koji stiže kao greška servera', () async {
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(403, errorBody('forbidden')),
+        ),
+        session: await signedIn(),
+      );
+
+      await expectLater(
+        HttpUserRepository(api).getUsers(),
+        throwsA(
+          isA<ServerRejectedException>().having(
+            (e) => e.error.code,
+            'code',
+            'forbidden',
+          ),
+        ),
+      );
+    });
+
+    test('prijava deaktiviranog naloga ima svoju poruku', () async {
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(403, errorBody('account_deactivated')),
+        ),
+      );
+
+      Object? caught;
+      try {
+        await HttpSessionRepository(
+          api,
+        ).logIn(email: 'a@example.com', password: 'x');
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught, isA<ServerRejectedException>());
+      expect(
+        describeError(caught!),
+        'Nalog je deaktiviran. Obratite se administratoru.',
+      );
+    });
+  });
+
   group('HttpAvailabilityRepository', () {
     Map<String, Object?> slot(int hour, String state) => {
       'startTime': DateTime.utc(2026, 11, 20, hour).toIso8601String(),

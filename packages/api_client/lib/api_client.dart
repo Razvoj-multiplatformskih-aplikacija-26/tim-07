@@ -12,3 +12,4 @@ export 'src/http_session_repository.dart';
 export 'src/http_statistics_repository.dart';
 export 'src/page.dart';
 export 'src/session_store.dart';
+export 'src/http_user_repository.dart';

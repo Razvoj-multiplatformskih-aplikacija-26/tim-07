@@ -36,6 +36,7 @@ Handler buildHandler(TerenzoHandlers handlers, SessionHandlers sessions, {requir
     ..post('${ApiPaths.reservations}/:id/check-in', signedIn(handlers.checkIn))
     ..get(ApiPaths.stats, signedIn(handlers.statistics))
     ..get(ApiPaths.users, signedIn(handlers.users))
+    ..patch('${ApiPaths.users}/:id', signedIn(handlers.setUserActive))
     ..fallback = respondWith((request) => errorResponse(const ErrorDto(code: ErrorCodes.notFound)));
   return const Pipeline()
       .addMiddleware(logRequests())

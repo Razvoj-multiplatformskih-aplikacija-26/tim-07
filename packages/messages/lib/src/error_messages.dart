@@ -68,6 +68,8 @@ String errorMessage(ErrorDto error) => switch (error.code) {
   ErrorCodes.invalidToken => 'Prijava nije važeća. Prijavite se ponovo.',
   ErrorCodes.tokenExpired => sessionExpiredMessage,
   ErrorCodes.invalidCredentials => 'Pogrešan e-mail ili lozinka.',
+  ErrorCodes.accountDeactivated =>
+      'Nalog je deaktiviran. Obratite se administratoru.',
   ErrorCodes.badRequest => 'Uneti podaci nisu ispravni.',
   ErrorCodes.payloadTooLarge => 'Poslati podaci su preveliki.',
   _ => genericErrorMessage,

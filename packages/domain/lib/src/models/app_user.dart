@@ -16,6 +16,10 @@ final class AppUser {
   final UserRole role;
   final DateTime createdAt;
 
+  /// Deaktiviran nalog se ne može prijaviti, a postojeća prijava prestaje da
+  /// važi. Deaktivira ga administrator (`canDeactivateUser`).
+  final bool isActive;
+
   const AppUser({
     required this.id,
     required this.firstName,
@@ -25,6 +29,7 @@ final class AppUser {
     required this.dateOfBirth,
     required this.role,
     required this.createdAt,
+    this.isActive = true,
   });
 
   /// Puno ime korisnika.
@@ -51,6 +56,7 @@ final class AppUser {
     String? phoneNumber,
     DateTime? dateOfBirth,
     UserRole? role,
+    bool? isActive,
   }) {
     return AppUser(
       id: id,
@@ -61,6 +67,7 @@ final class AppUser {
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       role: role ?? this.role,
       createdAt: createdAt,
+      isActive: isActive ?? this.isActive,
     );
   }
 }

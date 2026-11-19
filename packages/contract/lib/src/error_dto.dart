@@ -16,6 +16,9 @@ abstract final class ErrorCodes {
   static const tokenExpired = 'token_expired';
   static const invalidCredentials = 'invalid_credentials';
 
+  // 403 (nalog je deaktiviran)
+  static const accountDeactivated = 'account_deactivated';
+
   // 403, 404
   static const forbidden = 'forbidden';
   static const notFound = 'not_found';
@@ -51,6 +54,7 @@ abstract final class ErrorCodes {
     invalidToken,
     tokenExpired,
     invalidCredentials,
+    accountDeactivated,
     forbidden,
     notFound,
     slotTaken,
@@ -81,7 +85,7 @@ int httpStatusFor(String code) => switch (code) {
   ErrorCodes.invalidToken ||
   ErrorCodes.tokenExpired ||
   ErrorCodes.invalidCredentials => 401,
-  ErrorCodes.forbidden => 403,
+  ErrorCodes.forbidden || ErrorCodes.accountDeactivated => 403,
   ErrorCodes.notFound => 404,
   ErrorCodes.slotTaken ||
   ErrorCodes.invalidStatusTransition ||

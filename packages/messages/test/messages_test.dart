@@ -247,6 +247,13 @@ void main() {
       );
     });
 
+    test('deaktiviran nalog ima svoju poruku', () {
+      expect(
+        errorMessage(const ErrorDto(code: ErrorCodes.accountDeactivated)),
+        'Nalog je deaktiviran. Obratite se administratoru.',
+      );
+    });
+
     test('poruka demo repozitorijuma (StateError) ostaje čitljiva', () {
       expect(
         describeError(StateError('Server trenutno nije dostupan.')),

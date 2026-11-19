@@ -34,6 +34,7 @@ export 'src/rules/availability.dart';
 export 'src/rules/blocked_period_validation.dart';
 export 'src/rules/field_calendar.dart';
 export 'src/rules/reservation_search.dart';
+export 'src/rules/user_search.dart';
 export 'src/models/reservation_query.dart';
 export 'src/rules/permissions.dart';
 
@@ -52,4 +53,5 @@ export 'src/repositories/availability_repository.dart';
 export 'src/repositories/sports_field_repository.dart';
 export 'src/repositories/field_schedule_repository.dart';
 export 'src/repositories/user_repository.dart';
+export 'src/repositories/user_administration_repository.dart';
 export 'src/repositories/statistics_repository.dart';

@@ -293,7 +293,7 @@ Vlasnik vidi dan ili nedelju svojih terena, termin po termin.
 
 **Odluka.** Bloc postoji tamo gde stanje dolazi sa servera ili ga deli više ekrana; sve ostalo je stanje widgeta.
 
-- **Deljeni Bloc-ovi u `packages/blocs`, po oblastima** (`auth`, `reservations`, `reservation_list`, `fields`, `field_management`, `field_review`, `blocked_periods`, `calendar`, `statistics`, …). Svaki radi samo preko portova iz domena, pa ga isto koriste mobilna aplikacija, backoffice i testovi sa lažnim repozitorijumima. `AuthBloc` i `ReservationBloc` koriste oba klijenta.
+- **Deljeni Bloc-ovi u `packages/blocs`, po oblastima** (`auth`, `reservations`, `reservation_list`, `users`, `fields`, `field_management`, `field_review`, `blocked_periods`, `calendar`, `statistics`, …). Svaki radi samo preko portova iz domena, pa ga isto koriste mobilna aplikacija, backoffice i testovi sa lažnim repozitorijumima. `AuthBloc` i `ReservationBloc` koriste oba klijenta.
 - **U backoffice-u ostaju samo dva lokalna:** `ReservationSelectionBloc` (koja je rezervacija izabrana, deli ga tabela, lista, panel i tastatura) i `DirectoryCubit` (imena terena za tabelu, učitana sa servera posle prijave). Ne trebaju mobilnoj aplikaciji, pa nisu u zajedničkom paketu.
 - **Bez Bloc-a:** izabrana sekcija u navigaciji, otvoren dijalog, polja forme pre slanja i radno vreme pre čuvanja. To je stanje jednog widgeta; Bloc dobija tek gotov zahtev (`FieldSaveRequested`, `FieldScheduleSaveRequested`, `FieldReviewDecided`).
 - Nijedan widget ne čita `BackofficeDemoData`; demo podaci su samo izvor za lažne repozitorijume u testovima i demo režimu.
@@ -315,3 +315,19 @@ Vlasnik filtrira rezervacije po terenu, stanju i datumu, traži po korisniku, so
 **Odbačeno.**
 - *Filtriranje u klijentu nad celom listom.* Radi dok ima malo podataka, ali tabela bi učitavala sve rezervacije svih terena, a odluka 6 traži strane sa servera.
 - *Kursor umesto `offset`.* Vidi odluku 6.
+
+## 20. Nalozi: pregled i deaktivacija (administrator)
+
+Administrator vidi sve naloge, traži ih, filtrira po ulozi i deaktivira ih.
+
+- **Prava u domenu.** `canManageUsers` (samo administrator) i `canDeactivateUser(actor, target)`: administrator menja tuđ nalog, ne svoj, jer bi ostao bez pristupa, a možda i jedini administrator. Isto pravilo proverava `UsersBloc` (da uopšte ne traži tuđe podatke) i server (konačna reč). Vlasnik nema stavku „Korisnici“ u meniju, a server mu na `GET /users` i `PATCH /users/:id` odgovara sa 403.
+- **Deaktivacija je stanje naloga (`AppUser.isActive`), ne brisanje.** Rezervacije i istorija ostaju vezani za nalog, a nalog može ponovo da se aktivira. Kolona `users.is_active` (nova migracija) je podrazumevano `true`, pa postojeći nalozi ostaju aktivni.
+- **Prijava.** Deaktiviran nalog dobija `403 account_deactivated` pri prijavi, ali tek kada je lozinka tačna; pogrešna lozinka i dalje daje `401 invalid_credentials`, da se tuđim pogađanjem ne sazna koji nalozi su deaktivirani. Poruka je „Nalog je deaktiviran. Obratite se administratoru.“.
+- **Postojeća prijava prestaje odmah.** Server pri svakom zahtevu proverava nalog iz tokena, pa deaktiviran korisnik ne može da nastavi sa starim tokenom do isteka. Taj odgovor je `401 account_deactivated` (kao i ostale greške prijave), a klijent ga prikazuje istom porukom.
+- **Mreža:** `PATCH /users/:id` sa telom `{"isActive": false}` vraća nalog posle izmene. Spisak (`GET /users`) sada nosi i `isActive`, samo za administratora.
+- **Pretraga i uloga rade u klijentu** (`filterUsers`, domen) nad celim spiskom, za razliku od tabele rezervacija (odluka 19). Naloga ima malo (stotine, ne hiljade), a pretraga je tada trenutna i bez zahteva po slovu. Ako broj naloga naraste, ista funkcija prelazi na server kao `searchReservations`.
+- **Prikaz:** tabela sa kolonama korisnik (ime i email), uloga, datum registracije, stanje i akcija. Stanje je i ikona i reč, ne samo boja. U uskom prozoru nalozi su kartice. Deaktivacija traži potvrdu, aktivacija ne.
+
+**Odbačeno.**
+- *Brisanje naloga.* Rezervacije imaju strani ključ na korisnika, a brisanje bi izgubilo istoriju koja je potrebna statistici.
+- *Deaktivacija samo zabranjuje novu prijavu.* Korisnik bi mogao da nastavi sa starim tokenom do isteka (do 8 sati), što nije ono što administrator traži.

@@ -368,6 +368,112 @@ void main() {
     });
   });
 
+  group('nalozi za administratora', () {
+    Future<int> idOf(String token) async {
+      final answer = await http.get(base.replace(path: ApiPaths.me), headers: as(token));
+      return SessionDto.fromJson(jsonDecode(answer.body) as Map<String, Object?>).user.id;
+    }
+
+    Future<http.Response> setActive(String token, int id, {required bool active}) => http.patch(
+      base.replace(path: ApiPaths.user(id)),
+      headers: as(token),
+      body: jsonEncode(SetUserActiveRequestDto(isActive: active).toJson()),
+    );
+
+    Future<http.Response> tryLogIn(String email) => http.post(
+      base.replace(path: ApiPaths.login),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(LoginRequestDto(email: email, password: demoPassword).toJson()),
+    );
+
+    Future<String> addUser(String email) async {
+      await database.execute(
+        Sql.named('''
+          INSERT INTO users (first_name, last_name, email, phone_number, date_of_birth, role, password_hash)
+          VALUES ('Za', 'Gašenje', @email, '060', '2000-01-01', 'user', @hash)
+        '''),
+        parameters: {'email': email, 'hash': await hashPassword(demoPassword)},
+      );
+      return email;
+    }
+
+    test('an owner and a user get 403 on the list of accounts, an administrator gets all of them', () async {
+      final owner = await http.get(base.replace(path: ApiPaths.users), headers: as(await logIn('vlasnik1@terenzo.rs')));
+      final user = await http.get(base.replace(path: ApiPaths.users), headers: as(await logIn('korisnik1@terenzo.rs')));
+      final admin = await http.get(
+        base.replace(path: ApiPaths.users, queryParameters: {ApiQuery.limit: '100'}),
+        headers: as(await logIn('admin@terenzo.rs')),
+      );
+
+      expect((owner.statusCode, codeOf(owner)), (403, ErrorCodes.forbidden));
+      expect((user.statusCode, codeOf(user)), (403, ErrorCodes.forbidden));
+      expect(admin.statusCode, 200);
+      final page = PageDto.fromJson(jsonDecode(admin.body) as Map<String, Object?>, UserDto.fromJson);
+      expect(page.items.map((u) => u.role).toSet(), containsAll(['user', 'owner', 'admin']));
+      expect(page.items.every((u) => u.isActive == true && u.phoneNumber != null), isTrue);
+    });
+
+    test('a deactivated account cannot log in, and the session it had stops working at once', () async {
+      final email = await addUser('gasenje1@terenzo.rs');
+      final admin = await logIn('admin@terenzo.rs');
+      final token = await logIn(email);
+      final id = await idOf(token);
+
+      final off = await setActive(admin, id, active: false);
+      final login = await tryLogIn(email);
+      final old = await http.get(base.replace(path: ApiPaths.me), headers: as(token));
+
+      expect(off.statusCode, 200);
+      expect(UserDto.fromJson(jsonDecode(off.body) as Map<String, Object?>).isActive, isFalse);
+      expect((login.statusCode, codeOf(login)), (403, ErrorCodes.accountDeactivated));
+      expect((old.statusCode, codeOf(old)), (401, ErrorCodes.accountDeactivated));
+    });
+
+    test('a wrong password on a deactivated account does not reveal that it is deactivated', () async {
+      final email = await addUser('gasenje2@terenzo.rs');
+      final admin = await logIn('admin@terenzo.rs');
+      await setActive(admin, await idOf(await logIn(email)), active: false);
+
+      final answer = await http.post(
+        base.replace(path: ApiPaths.login),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(LoginRequestDto(email: email, password: 'pogresna-lozinka').toJson()),
+      );
+
+      expect((answer.statusCode, codeOf(answer)), (401, ErrorCodes.invalidCredentials));
+    });
+
+    test('an account that is activated again can log in', () async {
+      final email = await addUser('gasenje3@terenzo.rs');
+      final admin = await logIn('admin@terenzo.rs');
+      final id = await idOf(await logIn(email));
+      await setActive(admin, id, active: false);
+
+      final on = await setActive(admin, id, active: true);
+      final login = await tryLogIn(email);
+
+      expect(on.statusCode, 200);
+      expect(login.statusCode, 200);
+    });
+
+    test('only an administrator deactivates, and not their own account', () async {
+      final admin = await logIn('admin@terenzo.rs');
+      final victim = await idOf(await logIn('korisnik3@terenzo.rs'));
+
+      final byOwner = await setActive(await logIn('vlasnik1@terenzo.rs'), victim, active: false);
+      final byUser = await setActive(await logIn('korisnik1@terenzo.rs'), victim, active: false);
+      final own = await setActive(admin, await idOf(admin), active: false);
+      final unknown = await setActive(admin, 999999, active: false);
+      final stillIn = await tryLogIn('korisnik3@terenzo.rs');
+
+      expect((byOwner.statusCode, codeOf(byOwner)), (403, ErrorCodes.forbidden));
+      expect((byUser.statusCode, codeOf(byUser)), (403, ErrorCodes.forbidden));
+      expect((own.statusCode, codeOf(own)), (403, ErrorCodes.forbidden));
+      expect((unknown.statusCode, codeOf(unknown)), (404, ErrorCodes.notFound));
+      expect(stillIn.statusCode, 200);
+    });
+  });
+
   group('ugovor i pregledač', () {
     test('the public catalog works without signing in and pages with total', () async {
       final answer = await http.get(base.replace(path: ApiPaths.fields, queryParameters: {ApiQuery.limit: '2'}));

@@ -3,6 +3,7 @@ import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'data/backoffice_demo_data.dart';
 import 'data/directory.dart';
 import 'layout/backoffice_shell.dart';
 import 'screens/login_screen.dart';
@@ -19,6 +20,10 @@ class BackofficeApp extends StatefulWidget {
   final FieldScheduleRepository scheduleRepository;
   final AuthRepository? authRepository;
   final StatisticsRepository? statisticsRepository;
+
+  /// Nalozi za stranicu „Korisnici“. Kada nije dat, koriste se demo nalozi iz
+  /// memorije.
+  final UserAdministrationRepository? userRepository;
   final AppUser? owner;
 
   const BackofficeApp({
@@ -29,6 +34,7 @@ class BackofficeApp extends StatefulWidget {
     required this.scheduleRepository,
     this.authRepository,
     this.statisticsRepository,
+    this.userRepository,
     this.owner,
   }) : assert(authRepository != null || owner != null),
        assert(
@@ -123,6 +129,16 @@ class _BackofficeAppState extends State<BackofficeApp> {
           owner: owner,
         )..add(const CalendarStarted()),
       ),
+      if (canManageUsers(owner))
+        BlocProvider(
+          create: (_) => UsersBloc(
+            users: widget.userRepository ??
+                FakeUserAdministrationRepository(
+                  users: [...BackofficeDemoData.users, owner],
+                ),
+            viewer: owner,
+          )..add(const UsersStarted()),
+        ),
       BlocProvider(
         create: (_) => FieldManagementBloc(
           fields: widget.fieldRepository,

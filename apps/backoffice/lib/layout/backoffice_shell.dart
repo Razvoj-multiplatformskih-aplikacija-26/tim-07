@@ -9,6 +9,7 @@ import '../screens/fields_page.dart';
 import '../screens/field_review_page.dart';
 import '../screens/statistics_page.dart';
 import '../screens/reservations_page.dart';
+import '../screens/users_page.dart';
 import '../widgets/simulation_menu.dart';
 
 class BackofficeShell extends StatefulWidget {
@@ -61,9 +62,17 @@ class _BackofficeShellState extends State<BackofficeShell> {
     page: FieldReviewPage(),
   );
 
+  static const _users = _Section(
+    label: 'Korisnici',
+    icon: Icons.people_outline,
+    selectedIcon: Icons.people,
+    page: UsersPage(),
+  );
+
   List<_Section> _sectionsFor(AppUser user) => [
     ..._common,
     if (canReviewField(user)) _review,
+    if (canManageUsers(user)) _users,
   ];
 
   @override

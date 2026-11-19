@@ -64,6 +64,8 @@ final class SessionHandlers {
     final account = await store.account(body.email);
     final matches = await verifyPassword(body.password, account?.passwordHash ?? await _noAccountHash);
     if (account == null || !matches) return _unauthorized(ErrorCodes.invalidCredentials);
+    // Lozinka je tačna, pa se sme reći zašto prijava ne prolazi.
+    if (!account.user.isActive) return errorResponse(const ErrorDto(code: ErrorCodes.accountDeactivated));
 
     final now = _clock().toUtc();
     final expiresAt = DateTime.fromMillisecondsSinceEpoch(
@@ -113,6 +115,8 @@ final class SessionHandlers {
 
     final user = await store.user(id);
     if (user == null) return ErrorCodes.invalidToken;
+    // Prijava deaktiviranog naloga prestaje da važi odmah, ne tek kada istekne.
+    if (!user.isActive) return ErrorCodes.accountDeactivated;
     return SignedIn(user: user, expiresAt: expiresAt);
   }
 

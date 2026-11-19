@@ -144,3 +144,8 @@ bool canViewFieldStatistics(AppUser user, SportsField field) =>
 
 /// Spisak naloga i deaktivaciju naloga sme samo administrator.
 bool canManageUsers(AppUser user) => user.role == UserRole.admin;
+
+/// Administrator deaktivira ili ponovo aktivira tuđ nalog. Svoj ne sme: ostao
+/// bi bez pristupa, a možda i jedini administrator.
+bool canDeactivateUser(AppUser actor, AppUser target) =>
+    canManageUsers(actor) && actor.id != target.id;

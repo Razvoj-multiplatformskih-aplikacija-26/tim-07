@@ -9,6 +9,7 @@ final class PostgresTerenzo
         SportsFieldRepository,
         FieldScheduleRepository,
         UserRepository,
+        UserAdministrationRepository,
         StatisticsRepository,
         AvailabilityRepository {
   PostgresTerenzo(this._database, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
@@ -322,6 +323,13 @@ final class PostgresTerenzo
 
   @override
   Future<List<AppUser>> getUsers({UserRole? role}) => _store.users(role: role);
+
+  @override
+  Future<AppUser> setUserActive(UserId id, {required bool active}) async {
+    final user = await _store.setUserActive(id, active: active);
+    if (user == null) throw EntityNotFound('user', id.value);
+    return user;
+  }
 
   @override
   Future<OccupancyReport> getOccupancy({required StatsPeriod period, UserId? ownerId}) =>
