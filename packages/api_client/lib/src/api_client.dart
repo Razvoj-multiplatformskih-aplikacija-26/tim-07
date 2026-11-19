@@ -120,7 +120,9 @@ final class ApiClient {
     final error = _errorOf(response);
     if (sentToken &&
         (error.code == ErrorCodes.tokenExpired ||
-            error.code == ErrorCodes.invalidToken)) {
+            error.code == ErrorCodes.invalidToken ||
+            // Administrator je deaktivirao nalog dok je prijava važila.
+            error.code == ErrorCodes.accountDeactivated)) {
       await session.clear();
       if (!_expirations.isClosed) _expirations.add(null);
     }
