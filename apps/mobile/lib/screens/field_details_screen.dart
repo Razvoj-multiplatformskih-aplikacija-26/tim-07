@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/current_user.dart';
 import '../text/reservation_texts.dart';
+import '../widgets/sport_icon.dart';
 
 class FieldDetailsScreen extends StatefulWidget {
   final SportsField field;
@@ -201,7 +202,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
           Row(
             children: [
-              const Icon(Icons.sports),
+              Icon(sportIcon(widget.field.sport)),
               const SizedBox(width: 8),
               Text(sportLabel(widget.field.sport)),
             ],

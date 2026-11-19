@@ -53,6 +53,13 @@ final class FieldsBloc extends Bloc<FieldsEvent, FieldsState> {
       final fields = await repository.getPublicFields();
       if (request != _request) return;
 
+      // Izabran sport kog više nema u katalogu bi dao praznu listu bez čipa
+      // kojim bi se vratio, pa se filter skida.
+      final sport = _filters.sport;
+      if (sport != null && !availableSports(fields).contains(sport)) {
+        _filters = _filters.copyWith(clearSport: true);
+      }
+
       emit(
         fields.isEmpty
             ? FieldsEmpty(filters: _filters)

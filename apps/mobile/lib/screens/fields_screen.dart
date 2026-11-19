@@ -1,5 +1,4 @@
 import 'package:blocs/blocs.dart';
-import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -14,17 +13,6 @@ import '../widgets/fields_simulation_menu.dart';
 /// ekran samo šalje događaje i crta stanje.
 class FieldsScreen extends StatefulWidget {
   const FieldsScreen({super.key});
-
-  // Brzi filter sportova. Zamenjuje ga lista sportova sa servera (T55).
-  static const _quickSports = [
-    SportType.football,
-    SportType.basketball,
-    SportType.tennis,
-    SportType.padel,
-    SportType.swimming,
-    SportType.volleyball,
-    SportType.futsal,
-  ];
 
   @override
   State<FieldsScreen> createState() => _FieldsScreenState();
@@ -144,7 +132,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
                 selected: filters.sport == null,
                 onSelected: () => bloc.add(const FieldsSportSelected(null)),
               ),
-              for (final sport in FieldsScreen._quickSports)
+              for (final sport in state.sports)
                 _SportChip(
                   label: sportLabel(sport),
                   selected: filters.sport == sport,
@@ -188,7 +176,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
                       return FieldCard(
                         name: field.name,
                         location: field.address,
-                        sport: sportLabel(field.sport),
+                        sport: field.sport,
                         pricePerHour: field.pricePerHour,
                         onTap: () => context.push('/fields/${field.id.value}'),
                       );

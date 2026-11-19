@@ -79,3 +79,15 @@ List<SportsField> applyFieldFilters(
 
   return [for (final entry in indexed) entry.$2];
 }
+
+/// Sportovi koji postoje na [fields], bez ponavljanja, redom kojim su navedeni u
+/// `SportType`. Zato novi sport na nekom terenu dobija svoj čip bez izmene koda,
+/// a sport bez terena ga nema.
+List<SportType> availableSports(Iterable<SportsField> fields) {
+  final present = {for (final field in fields) field.sport};
+
+  return [
+    for (final sport in SportType.values)
+      if (present.contains(sport)) sport,
+  ];
+}
