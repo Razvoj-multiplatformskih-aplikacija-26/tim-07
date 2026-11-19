@@ -1,5 +1,6 @@
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -13,15 +14,36 @@ import 'reservation_status_chip.dart';
 /// Širok prozor ih crta jednu pored druge (sa pomeranjem u stranu kada ih je
 /// puno), uzak jednu ispod druge. Svaki red nosi tekst stanja, pa boja nije
 /// jedini nosilac značenja.
-class CalendarColumns extends StatelessWidget {
+class CalendarColumns extends StatefulWidget {
   final CalendarLoaded state;
 
   /// Vlasnik je izabrao rezervaciju.
   final ValueChanged<Reservation> onOpen;
 
+  /// Najmanja širina kolone terena (dnevni prikaz).
   static const columnWidth = 220.0;
 
+  /// Najmanja širina kolone dana (nedeljni prikaz): sedam kolona treba da stane
+  /// u prozor od oko 1100 piksela bez pomeranja u stranu.
+  static const dayColumnWidth = 124.0;
+
   const CalendarColumns({super.key, required this.state, required this.onOpen});
+
+  @override
+  State<CalendarColumns> createState() => _CalendarColumnsState();
+}
+
+class _CalendarColumnsState extends State<CalendarColumns> {
+  final _horizontal = ScrollController();
+
+  CalendarLoaded get state => widget.state;
+  ValueChanged<Reservation> get onOpen => widget.onOpen;
+
+  @override
+  void dispose() {
+    _horizontal.dispose();
+    super.dispose();
+  }
 
   String _title(BuildContext context, FieldCalendarDay day) {
     if (state.view == CalendarView.day) {
@@ -47,9 +69,13 @@ class CalendarColumns extends StatelessWidget {
         ),
     ];
 
+    final minWidth = state.view == CalendarView.week
+        ? CalendarColumns.dayColumnWidth
+        : CalendarColumns.columnWidth;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 2 * columnWidth) {
+        if (constraints.maxWidth < 2 * minWidth) {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -63,27 +89,43 @@ class CalendarColumns extends StatelessWidget {
         }
 
         final width = ((constraints.maxWidth - 32) / columns.length).clamp(
-          columnWidth,
+          minWidth,
           double.infinity,
         );
 
-        return Scrollbar(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(16),
+        // Kada kolone ipak ne stanu, ostaje vidljiva traka za pomeranje, a
+        // pomera se i prevlačenjem mišem (u pregledaču točkić miša pomera samo
+        // uspravno).
+        return ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(
+            dragDevices: {
+              PointerDeviceKind.touch,
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.trackpad,
+              PointerDeviceKind.stylus,
+            },
+          ),
+          child: Scrollbar(
+            controller: _horizontal,
+            thumbVisibility: true,
             child: SingleChildScrollView(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final column in columns)
-                    SizedBox(
-                      width: width - 8,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: column,
+              controller: _horizontal,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: SingleChildScrollView(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final column in columns)
+                      SizedBox(
+                        width: width - 8,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: column,
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -128,13 +170,14 @@ class _Column extends StatelessWidget {
                 title: 'Ne radi',
                 subtitle: 'Teren tog dana nema radno vreme.',
                 kind: CalendarTileKind.closed,
-              )
-            else
-              for (final entry in day.entries)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: _EntryTile(entry: entry, onOpen: onOpen),
-                ),
+              ),
+            // Rezervacije se prikazuju i kada je teren zatvoren tog dana ili su van
+            // radnog vremena (promenjeno je posle rezervisanja).
+            for (final entry in day.entries)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _EntryTile(entry: entry, onOpen: onOpen),
+              ),
           ],
         ),
       ),
@@ -167,11 +210,16 @@ class _EntryTile extends StatelessWidget {
             : 'Blokirano: ${period.reason}',
         kind: CalendarTileKind.blocked,
       ),
-      CalendarReservation(:final reservation, :final status) =>
+      CalendarReservation(
+        :final reservation,
+        :final status,
+        :final outsideWorkingHours,
+      ) =>
         _ReservationTile(
           reservation: reservation,
           status: status,
           range: range,
+          outsideWorkingHours: outsideWorkingHours,
           onOpen: onOpen,
         ),
     };
@@ -182,12 +230,14 @@ class _ReservationTile extends StatelessWidget {
   final Reservation reservation;
   final ReservationStatus status;
   final String range;
+  final bool outsideWorkingHours;
   final ValueChanged<Reservation> onOpen;
 
   const _ReservationTile({
     required this.reservation,
     required this.status,
     required this.range,
+    required this.outsideWorkingHours,
     required this.onOpen,
   });
 
@@ -206,7 +256,9 @@ class _ReservationTile extends StatelessWidget {
         _ => Icons.check_circle_outline,
       },
       title: range,
-      subtitle: '$label: ${directory.customerName(reservation)}',
+      subtitle:
+          '$label: ${directory.customerName(reservation)}'
+          '${outsideWorkingHours ? ' · van radnog vremena' : ''}',
       kind: switch (status) {
         ReservationStatus.pending => CalendarTileKind.pending,
         ReservationStatus.completed => CalendarTileKind.completed,
@@ -321,6 +373,8 @@ class CalendarEntryTile extends StatelessWidget {
                       ),
                       Text(
                         subtitle,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: foreground,
                         ),

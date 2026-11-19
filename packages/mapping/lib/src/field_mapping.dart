@@ -161,8 +161,9 @@ extension BlockedPeriodDtoMapping on BlockedPeriodDto {
   BlockedPeriod toDomain() => BlockedPeriod(
     id: id == null ? null : BlockedPeriodId(id!),
     fieldId: FieldId(fieldId),
-    startTime: startTime,
-    endTime: endTime,
+    // UTC sa servera, lokalno vreme na ekranu (vidi `ReservationDtoMapping`).
+    startTime: startTime.toLocal(),
+    endTime: endTime.toLocal(),
     reason: reason,
   );
 }

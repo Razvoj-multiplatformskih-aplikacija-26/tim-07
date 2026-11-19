@@ -27,8 +27,10 @@ extension ReservationDtoMapping on ReservationDto {
     id: ReservationId(id),
     fieldId: FieldId(fieldId),
     userId: UserId(userId),
-    startTime: startTime,
-    endTime: endTime,
+    // Server šalje trenutke u UTC; klijent ih prikazuje u lokalnom vremenu
+    // (isto kao termini u `HttpAvailabilityRepository`), da 17:00Z bude 18:00.
+    startTime: startTime.toLocal(),
+    endTime: endTime.toLocal(),
     totalPrice: totalPrice,
     status: requireKnown(
       reservationStatusFromCode(status),
@@ -40,9 +42,9 @@ extension ReservationDtoMapping on ReservationDto {
       'paymentStatus',
       paymentStatus,
     ),
-    checkedInAt: checkedInAt,
+    checkedInAt: checkedInAt?.toLocal(),
     cancellationReason: cancellationReason,
-    createdAt: createdAt,
+    createdAt: createdAt.toLocal(),
     customer: customer?.toDomain(),
   );
 

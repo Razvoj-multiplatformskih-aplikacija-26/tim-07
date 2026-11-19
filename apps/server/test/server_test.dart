@@ -543,6 +543,83 @@ void main() {
     });
   });
 
+  group('radno vreme i postojeće rezervacije', () {
+    Future<http.Response> putSchedule(String token, int field, int opens, int closes) => http.put(
+      base.replace(path: ApiPaths.schedule(field)),
+      headers: as(token),
+      body: jsonEncode(
+        ScheduleDto(
+          days: [
+            for (final day in [
+              WeekDayCodes.monday,
+              WeekDayCodes.tuesday,
+              WeekDayCodes.wednesday,
+              WeekDayCodes.thursday,
+              WeekDayCodes.friday,
+              WeekDayCodes.saturday,
+              WeekDayCodes.sunday,
+            ])
+              ScheduleDayDto(dayOfWeek: day, opensAt: ClockTime(opens, 0), closesAt: ClockTime(closes, 0)),
+          ],
+        ).toJson(),
+      ),
+    );
+
+    test('shortening the hours over an existing booking is refused with the count and the earliest one', () async {
+      final user = await logIn('korisnik3@terenzo.rs');
+      final owner = await logIn('vlasnik1@terenzo.rs');
+      final basket = await fieldId('Basket Park');
+      final created = await reserve(user, basket, day(21, 15), day(21, 16));
+      expect(created.statusCode, 201);
+
+      final refused = await putSchedule(owner, basket, 8, 14);
+
+      expect((refused.statusCode, codeOf(refused)), (409, ErrorCodes.scheduleConflictsWithReservations));
+      final error = ErrorDto.fromJson(jsonDecode(refused.body) as Map<String, Object?>);
+      expect(error.detailInt(ErrorDetailKeys.count), greaterThanOrEqualTo(1));
+      expect(error.details[ErrorDetailKeys.time], isNotNull);
+      // Radno vreme je ostalo staro.
+      final current = await http.get(base.replace(path: ApiPaths.schedule(basket)));
+      expect(
+        ScheduleDto.fromJson(jsonDecode(current.body) as Map<String, Object?>).days.first.closesAt,
+        const ClockTime(23, 0),
+      );
+    });
+
+    test('a change that still covers every booking is saved', () async {
+      final owner = await logIn('vlasnik1@terenzo.rs');
+      final basket = await fieldId('Basket Park');
+
+      final saved = await putSchedule(owner, basket, 8, 23);
+
+      expect(saved.statusCode, 200);
+    });
+
+    test('after the booking is cancelled the same shortening goes through', () async {
+      final user = await logIn('korisnik3@terenzo.rs');
+      final owner = await logIn('vlasnik1@terenzo.rs');
+      final arena = await fieldId('Arena Fudbal');
+      final created = reservationOf(await reserve(user, arena, day(22, 17), day(22, 18)));
+      expect((await putSchedule(owner, arena, 8, 12)).statusCode, 409);
+
+      final cancel = await act(user, ApiPaths.cancelReservation(created.id));
+      expect(cancel.statusCode, 200);
+      // Ostale rezervacije Arene (iz početnih podataka) još drže termine do 21 h.
+      final again = await putSchedule(owner, arena, 8, 22);
+
+      expect(again.statusCode, 200);
+    });
+
+    test('the owner of another field cannot change the hours at all', () async {
+      final other = await logIn('vlasnik2@terenzo.rs');
+      final basket = await fieldId('Basket Park');
+
+      final answer = await putSchedule(other, basket, 8, 23);
+
+      expect(answer.statusCode, 403);
+    });
+  });
+
   group('ugovor i pregledač', () {
     test('the public catalog works without signing in and pages with total', () async {
       final answer = await http.get(base.replace(path: ApiPaths.fields, queryParameters: {ApiQuery.limit: '2'}));

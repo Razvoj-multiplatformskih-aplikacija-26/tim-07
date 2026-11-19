@@ -58,6 +58,19 @@ final class FakeFieldScheduleRepository implements FieldScheduleRepository {
     final error = validateFieldSchedule(fieldId: fieldId, schedules: schedules);
     if (error != null) throw ScheduleRuleViolation(error);
 
+    // Isto pravilo kao na serveru: postojeće rezervacije moraju da ostanu u
+    // radnom vremenu.
+    final source = reservations;
+    if (source != null) {
+      final conflict = validateScheduleAgainstReservations(
+        fieldId: fieldId,
+        schedules: schedules,
+        reservations: await source.getReservationsByField(fieldId),
+        now: _clock(),
+      );
+      if (conflict != null) throw ScheduleRuleViolation(conflict);
+    }
+
     _schedules
       ..removeWhere((schedule) => schedule.fieldId == fieldId)
       ..addAll(schedules);

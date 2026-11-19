@@ -44,7 +44,16 @@ final class CalendarReservation implements CalendarEntry {
   final Reservation reservation;
   final ReservationStatus status;
 
-  const CalendarReservation({required this.reservation, required this.status});
+  /// Rezervacija je van (sada važećeg) radnog vremena terena: nastala je pod
+  /// starim radnim vremenom. Prikazuje se, da vlasnik ne izgubi iz vida termin
+  /// koji ga čeka.
+  final bool outsideWorkingHours;
+
+  const CalendarReservation({
+    required this.reservation,
+    required this.status,
+    this.outsideWorkingHours = false,
+  });
 
   @override
   DateTime get startTime => reservation.startTime;
@@ -58,11 +67,12 @@ final class CalendarReservation implements CalendarEntry {
       other.reservation.id == reservation.id &&
       other.reservation.startTime == reservation.startTime &&
       other.reservation.endTime == reservation.endTime &&
-      other.status == status;
+      other.status == status &&
+      other.outsideWorkingHours == outsideWorkingHours;
 
   @override
   int get hashCode =>
-      Object.hash(reservation.id, reservation.startTime, reservation.endTime, status);
+      Object.hash(reservation.id, reservation.startTime, reservation.endTime, status, outsideWorkingHours);
 }
 
 /// Blokada terena (održavanje, događaj) u kalendaru.
@@ -171,16 +181,10 @@ FieldCalendarDay buildFieldCalendarDay({
 
   final opens = schedule?.opensAt.totalMinutes ?? 0;
   final closes = schedule?.closesAt.totalMinutes ?? 0;
-  if (schedule == null || !schedule.isOpen || closes <= opens) {
-    return FieldCalendarDay(
-      fieldId: fieldId,
-      date: day,
-      isOpen: false,
-      entries: const [],
-    );
-  }
+  final isOpen = schedule != null && schedule.isOpen && closes > opens;
 
   DateTime at(int minutes) => DateTime(day.year, day.month, day.day, 0, minutes);
+  final nextDay = DateTime(day.year, day.month, day.day + 1);
 
   final visible = <CalendarReservation>[
     for (final reservation in reservations)
@@ -198,7 +202,7 @@ FieldCalendarDay buildFieldCalendarDay({
   final shownReservations = <ReservationId>{};
   final shownBlocks = <BlockedPeriod>{};
 
-  for (var start = opens; start + step <= closes; start += step) {
+  for (var start = opens; isOpen && start + step <= closes; start += step) {
     final startTime = at(start);
     final endTime = at(start + step);
 
@@ -247,10 +251,33 @@ FieldCalendarDay buildFieldCalendarDay({
     );
   }
 
+  // Rezervacije koje su ostale van radnog vremena (radno vreme je promenjeno
+  // posle rezervisanja) ili tog dana teren ne radi: ne smeju da nestanu.
+  final outside = [
+    for (final candidate in visible)
+      if (!shownReservations.contains(candidate.reservation.id) &&
+          doTimeRangesOverlap(
+            firstStart: day,
+            firstEnd: nextDay,
+            secondStart: candidate.startTime,
+            secondEnd: candidate.endTime,
+          ))
+        CalendarReservation(
+          reservation: candidate.reservation,
+          status: candidate.status,
+          outsideWorkingHours: true,
+        ),
+  ];
+  if (outside.isNotEmpty) {
+    entries
+      ..addAll(outside)
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+  }
+
   return FieldCalendarDay(
     fieldId: fieldId,
     date: day,
-    isOpen: true,
+    isOpen: isOpen,
     entries: entries,
   );
 }

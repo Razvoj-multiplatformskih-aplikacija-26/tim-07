@@ -71,6 +71,23 @@ extension ErrorDtoMapping on ErrorDto {
   };
 }
 
+extension ScheduleConflictMapping on ScheduleConflictsWithReservations {
+  /// Broj i najranija rezervacija idu kao podaci, a poruku pravi klijent.
+  ErrorDto toErrorDto() {
+    final start = firstStart.toLocal();
+
+    return ErrorDto(
+      code: ErrorCodes.scheduleConflictsWithReservations,
+      details: {
+        ErrorDetailKeys.count: count,
+        ErrorDetailKeys.date: dateToJson(start.year, start.month, start.day),
+        ErrorDetailKeys.time:
+            '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}',
+      },
+    );
+  }
+}
+
 extension BlockedPeriodErrorMapping on BlockedPeriodError {
   /// Kod greške blokade terena; bez podataka, poruku pravi klijent.
   ErrorDto toErrorDto() => switch (this) {
@@ -100,6 +117,8 @@ extension BlockedPeriodErrorDtoMapping on ErrorDto {
 ApiFailure? failureOf(Object error) => switch (error) {
   ReservationRuleViolation(:final error) => error.toFailure(),
   BlockedPeriodRuleViolation(:final error) => error.toFailure(),
+  ScheduleRuleViolation(error: final ScheduleConflictsWithReservations conflict) =>
+    ApiFailure(conflict.toErrorDto()),
   // Ne otkriva da li zapis postoji kod nekog drugog (odluka 4): isto kao tuđ zapis.
   EntityNotFound() => const ApiFailure(ErrorDto(code: ErrorCodes.notFound)),
   ApprovalTransitionNotAllowed(:final from, :final to) => ApiFailure(

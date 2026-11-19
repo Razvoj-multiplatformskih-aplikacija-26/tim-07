@@ -251,7 +251,7 @@ void main() {
       ]);
       expect(
         bloc.state.message,
-        'Backoffice je za vlasnike i administratore sportskih objekata.',
+        'Pristup odbijen.',
       );
       // Odbijena prijava ne ostaje sačuvana.
       expect(repository.stored, isNull);

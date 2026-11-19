@@ -92,7 +92,7 @@ Nepoznat kod stanja (npr. server doda novo stanje, a aplikacija je starija) **ne
 
 U bazi: novac je `integer` (dinari), trenuci su `timestamptz`, stanja su `text` sa istim kodovima kao na mreži.
 
-**Vremenska zona.** Radno vreme je lokalno, a trenuci su u UTC. Server radi u zoni `Europe/Belgrade` (`TZ` i podatak o zoni u Docker slici) i pre poziva pravila radnog vremena pretvara trenutke u lokalno vreme, tako da se pravilo iz `domain` ne menja.
+**Vremenska zona.** Radno vreme je lokalno, a trenuci su u UTC. Server radi u zoni `Europe/Belgrade` (`TZ` i podatak o zoni u Docker slici) i pre poziva pravila radnog vremena pretvara trenutke u lokalno vreme, tako da se pravilo iz `domain` ne menja. Obrnuto, klijent trenutke sa servera (rezervacije, blokade, datum registracije, termini) pri čitanju pretvara u lokalno vreme (`toLocal()` u `packages/mapping` i `api_client`), pa ekran pokazuje 18:00, a ne 17:00 (UTC). Test: „blokada i rezervacija sa servera se prikazuju u lokalnom vremenu“.
 
 **Odbačeno.**
 - *Novac kao `double`.* Greške zaokruživanja (0,1 + 0,2), a dinari nemaju potrebu za decimalama.
@@ -348,3 +348,18 @@ Vlasnik terena mora da zna ko je rezervisao (ime i kontakt), a ne sme da čita t
 - Pretraga po korisniku u tabeli rezervacija (odluka 19) računa se na serveru nad istim nalozima.
 
 **Odbačeno.** *`GET /users/:id` za vlasnika.* Dodatan zahtev po rezervaciji (ili keš imenika) za podatak koji server već ima u istom upitu.
+
+## 22. Promena radnog vremena kada već postoje rezervacije
+
+Korisnik je rezervisao termin pod uslovima koji su važili tada, pa vlasnik ne može tiho da ga pretvori u termin kada teren ne radi.
+
+- **Odluka.** Radno vreme se ne čuva ako neka rezervacija ovog terena koja je na čekanju ili potvrđena (i još nije završena) ne bi stala u novo radno vreme. Server odgovara `409 schedule_conflicts_with_reservations` sa brojem takvih rezervacija i najranijom (`count`, `date`, `time`), a aplikacija piše: „Radno vreme nije sačuvano: novo radno vreme ne obuhvata 2 postojeće rezervacije (najranija: 20.11.2026. u 15:00). Prvo otkažite ili odbijte te rezervacije, ili zadržite radno vreme koje ih obuhvata.“ Staro radno vreme ostaje.
+- **Pravilo je u domenu** (`validateScheduleAgainstReservations`), a primenjuju ga server (u transakciji, uz zaključan red terena, isto kao pravljenje rezervacije, pa nova rezervacija ne može da uđe između provere i upisa) i lažni izvor u klijentu. Ne računaju se otkazane, završene i prošle rezervacije, ni rezervacija na čekanju kojoj je rok već istekao (`resolveReservationStatus`).
+- **Kako se rešava sukob:** vlasnik otkaže ili odbije te rezervacije (obaveštenje korisniku šalje se kao i pri svakom otkazivanju), pa sačuva radno vreme. Ili zadrži radno vreme koje ih obuhvata.
+- **Kalendar ne sakriva ništa.** Rezervacija koja je ostala van radnog vremena (stari podaci ili neradni dan) i dalje se prikazuje, sa oznakom „van radnog vremena“. Do toga ne bi smelo da dođe, ali podaci mogu da potiču od ranije.
+- Blokade i radno vreme su odvojeni pojmovi: blokada je izuzetak za jedan period (odluka 15), a radno vreme je pravilo za svaki dan u nedelji.
+
+**Odbačeno.**
+- *Dozvoliti promenu i ostaviti rezervacije van radnog vremena.* Korisnik bi dobio termin kada teren ne radi, a vlasnik ne bi imao čime da ga upozori; statistika i kalendar bi pokazivali nemoguće stanje.
+- *Automatski otkazati rezervacije koje ne staju.* Korisnik bi izgubio termin bez svoje volje i bez razloga; odluka o otkazivanju pripada vlasniku (isto kao u odluci 15).
+- *Primeniti novo radno vreme samo na rezervacije posle određenog datuma.* Dodaje stanje (radno vreme važi od datuma) i novu tabelu, a za projekat je dovoljno da se sukob reši pre čuvanja.

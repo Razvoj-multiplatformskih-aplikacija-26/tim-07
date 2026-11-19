@@ -263,6 +263,14 @@ final class PostgresTerenzo
     await _database.runTx((tx) async {
       final store = TerenzoStore(tx);
       if (await store.fieldForUpdate(fieldId) == null) throw EntityNotFound('field', fieldId.value);
+      // Teren je zaključan, pa nova rezervacija ne može da uđe između provere i upisa.
+      final conflict = validateScheduleAgainstReservations(
+        fieldId: fieldId,
+        schedules: schedules,
+        reservations: await store.reservations(fieldId: fieldId),
+        now: now().toLocal(),
+      );
+      if (conflict != null) throw ScheduleRuleViolation(conflict);
       await store.replaceSchedules(fieldId, schedules);
     });
   }

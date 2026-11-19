@@ -15,6 +15,7 @@ Response problem(Object error) => errorResponse(errorOf(error) ?? const ErrorDto
 
 ErrorDto? errorOf(Object error) => switch (error) {
   Refused(:final error) => error,
+  ScheduleRuleViolation(error: final ScheduleConflictsWithReservations conflict) => conflict.toErrorDto(),
   ScheduleRuleViolation(:final error) => ErrorDto(
     code: ErrorCodes.badRequest,
     details: {
@@ -23,6 +24,7 @@ ErrorDto? errorOf(Object error) => switch (error) {
         InvalidTimeOfDay() => 'invalid_time_of_day',
         DuplicateScheduleDay() => 'duplicate_day',
         ScheduleForOtherField() => 'other_field',
+        ScheduleConflictsWithReservations() => 'schedule_conflicts',
       },
       if (error.day case final day?) 'day': weekDayToCode(day),
     },

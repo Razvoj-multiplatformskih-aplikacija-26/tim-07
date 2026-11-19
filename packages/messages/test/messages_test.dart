@@ -247,6 +247,38 @@ void main() {
       );
     });
 
+    test('sukob radnog vremena: broj, najranija rezervacija i šta da se uradi', () {
+      String message(int count) => errorMessage(
+        ErrorDto(
+          code: ErrorCodes.scheduleConflictsWithReservations,
+          details: {
+            ErrorDetailKeys.count: count,
+            ErrorDetailKeys.date: '2026-11-20',
+            ErrorDetailKeys.time: '15:00',
+          },
+        ),
+      );
+
+      expect(message(1), contains('jednu postojeću rezervaciju (najranija: 20.11.2026. u 15:00)'));
+      expect(message(2), contains('2 postojeće rezervacije'));
+      expect(message(5), contains('5 postojećih rezervacija'));
+      expect(message(12), contains('12 postojećih rezervacija'));
+      expect(message(22), contains('22 postojeće rezervacije'));
+      expect(message(1), contains('otkažite ili odbijte'));
+    });
+
+    test('ista poruka kada pravilo proveri klijent i kada ga proveri server', () {
+      final conflict = ScheduleConflictsWithReservations(
+        count: 2,
+        firstStart: DateTime(2026, 11, 20, 15),
+      );
+
+      expect(
+        describeError(ScheduleRuleViolation(conflict)),
+        describeError(ServerRejectedException(conflict.toErrorDto())),
+      );
+    });
+
     test('deaktiviran nalog ima svoju poruku', () {
       expect(
         errorMessage(const ErrorDto(code: ErrorCodes.accountDeactivated)),
@@ -266,7 +298,7 @@ void main() {
     test('svaka aplikacija kaže za koga je', () {
       expect(
         signInNotAllowedMessage(ClientApp.backoffice),
-        'Backoffice je za vlasnike i administratore sportskih objekata.',
+        'Pristup odbijen.',
       );
       expect(
         signInNotAllowedMessage(ClientApp.mobile),

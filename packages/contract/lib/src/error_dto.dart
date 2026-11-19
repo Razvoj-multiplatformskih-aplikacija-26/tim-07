@@ -31,6 +31,10 @@ abstract final class ErrorCodes {
   // 409 (blokada terena preko potvrđene rezervacije)
   static const blockOverlapsReservation = 'block_overlaps_reservation';
 
+  // 409 (promena radnog vremena preko postojećih rezervacija)
+  static const scheduleConflictsWithReservations =
+      'schedule_conflicts_with_reservations';
+
   // 422 (pravila iz domena)
   static const invalidBlockRange = 'invalid_block_range';
   static const blockInPast = 'block_in_past';
@@ -61,6 +65,7 @@ abstract final class ErrorCodes {
     invalidStatusTransition,
     invalidApprovalTransition,
     blockOverlapsReservation,
+    scheduleConflictsWithReservations,
     invalidBlockRange,
     blockInPast,
     invalidTimeRange,
@@ -90,7 +95,8 @@ int httpStatusFor(String code) => switch (code) {
   ErrorCodes.slotTaken ||
   ErrorCodes.invalidStatusTransition ||
   ErrorCodes.invalidApprovalTransition ||
-  ErrorCodes.blockOverlapsReservation => 409,
+  ErrorCodes.blockOverlapsReservation ||
+  ErrorCodes.scheduleConflictsWithReservations => 409,
   ErrorCodes.invalidBlockRange ||
   ErrorCodes.blockInPast ||
   ErrorCodes.invalidTimeRange ||
@@ -116,6 +122,12 @@ abstract final class ErrorDetailKeys {
   /// `bad_request`: ime polja ili razlog.
   static const fields = 'fields';
   static const reason = 'reason';
+
+  /// `schedule_conflicts_with_reservations`: koliko rezervacija ne staje u novo
+  /// radno vreme i kada je najranija (lokalni datum `YYYY-MM-DD` i vreme `HH:mm`).
+  static const count = 'count';
+  static const date = 'date';
+  static const time = 'time';
 
   /// `invalid_approval_transition`: stanje odobrenosti pre i posle.
   static const from = 'from';
