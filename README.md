@@ -93,7 +93,7 @@ Za kreiranje rezervacije potrebna je prijava na sistem.
 | Mobilna aplikacija | korisnici                         | Flutter           | Android, iOS   |
 | Backoffice         | vlasnici objekata, administratori | Flutter           | Veb            |
 | Javni veb          | svi posetioci                     | Jaspr             | pregledač      |
-| Server             | ostali delovi sistema             | Relic, MySql      | Linux, Windows |
+| Server             | ostali delovi sistema             | Relic, PostgreSQL | Linux, Windows |
 | Domenski paket     | svi delovi sistema                | Dart              | sve            |
 
 ## Implementacija KT1

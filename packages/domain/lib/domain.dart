@@ -15,6 +15,7 @@ export 'src/models/reservation.dart';
 export 'src/models/field_schedule.dart';
 export 'src/models/review.dart';
 export 'src/models/occupancy.dart';
+export 'src/models/slot_availability.dart';
 
 // T06 — Statusi i automatski životni ciklus.
 export 'src/rules/reservation_transitions.dart';
@@ -27,6 +28,8 @@ export 'src/rules/domain_exceptions.dart';
 export 'src/rules/field_approval.dart';
 export 'src/rules/field_schedule_validation.dart';
 export 'src/rules/occupancy.dart';
+export 'src/rules/staff_cancellation.dart';
+export 'src/rules/availability.dart';
 export 'src/rules/permissions.dart';
 
 // T08 — Preklapanje, blokirani termini i radno vreme.

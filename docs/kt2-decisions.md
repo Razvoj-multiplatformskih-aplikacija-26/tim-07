@@ -11,7 +11,7 @@ Ovaj dokument beleži odluke za KT2 (server, baza, ugovor, prijava i uloge) za g
 | Prevod ugovor ↔ domen | `packages/mapping` | `contract`, `domain` |
 | HTTP klijent | `packages/api_client` | `contract`, `mapping`, `domain`, `package:http` |
 | Bloc-ovi | `packages/blocs` | `domain` |
-| Server | `apps/server` | `domain`, `contract`, `mapping`, Relic, MySQL |
+| Server | `apps/server` | `domain`, `contract`, `mapping`, Relic, PostgreSQL |
 
 Server i klijenti koriste **isti** `domain` (pravila) i **isti** `mapping` (prevod), pa se pravilo i prevod pišu na jednom mestu.
 
@@ -29,30 +29,31 @@ Uz preklapanje važe i ostala pravila iz KT1: radno vreme, budućnost i ispravno
 
 ## 2. Ko konačno čuva pravilo: server uz zaštitu u bazi
 
-**Odluka.** Konačnu odluku donosi **server**, pre svakog upisa, pozivom istih funkcija iz `domain` (`validateReservationSlot`, `validateCancellation`, `canTransitionReservationStatus`, `resolveReservationStatus`). Provera i upis su u **jednoj transakciji** koja **prvo** zaključa red terena i red korisnika (`SELECT id … FOR UPDATE`), a tek onda čita rezervacije, radno vreme i blokade. Drugi zahtev za isti teren (ili istog korisnika, jer korisnik ne sme da ima dve rezervacije u isto vreme ni na različitim terenima) čeka da se prva transakcija završi, pa tek onda čita rezervacije i vidi novi upis. Zaključavanje uvek ide istim redom (teren, pa korisnik), pa dve transakcije ne mogu da čekaju jedna drugu u krug (deadlock).
+**Odluka.** Konačnu odluku donosi **server**, pre svakog upisa, pozivom istih funkcija iz `domain` (`validateReservationSlot`, `validateCancellationBy`, `canTransitionReservationStatus`, `resolveReservationStatus`). Kada dva zahteva stignu u istom trenutku i oba prođu proveru u Dartu, **baza propušta samo jedan**: tabela `reservations` ima dva ograničenja isključivanja (PostgreSQL `EXCLUDE USING gist`, uz `btree_gist`):
 
-Izmena radnog vremena zaključava isti red terena, a stari raspored se briše i novi upisuje u jednoj transakciji. Rezervacija koja stigne u isto vreme zato se proverava ili po starom ili po novom rasporedu, nikad po delimično upisanom. Pre upisa raspored proverava `validateFieldSchedule` iz domena (otvaranje pre zatvaranja, ispravno vreme, jedan red po danu), a neispravan raspored ostavlja stari netaknut.
+- `reservations_no_double_booking`: isti teren i preklapanje `tstzrange(start_time, end_time)` za aktivne rezervacije (`pending`, `confirmed`);
+- `reservations_one_field_per_user`: isti korisnik i preklapanje termina, i kada su tereni različiti.
 
-Transakcije rade u nivou izolacije `READ COMMITTED`: svaka naredba vidi poslednje potvrđene podatke. U podrazumevanom `REPEATABLE READ` transakcija čita sliku baze napravljenu pri prvom običnom čitanju, pa bi čitanje pre zaključavanja dalo staru sliku bez tuđe rezervacije.
+Kada baza odbije upis (greška `23P01`), server vraća isto pravilo kao domen: `SlotAlreadyTaken`, na mreži `409 slot_taken`. Promena stanja je uslovni upis nad starim stanjem (`UPDATE … WHERE id = @id AND status = @from`): ako je neko u međuvremenu promenio rezervaciju, upis ne menja ništa i server vraća `409 invalid_status_transition`. Isto važi za odobravanje terena.
 
-Baza dodatno čuva ono što ume da izrazi: strani ključevi, `CHECK (start_time < end_time)`, `CHECK` nad dozvoljenim tekstom stanja, `CHECK (price >= 0)`.
+Izmena radnog vremena zaključava red terena (`SELECT … FOR UPDATE`), a stari raspored se briše i novi upisuje u jednoj transakciji. Pre upisa raspored proverava `validateFieldSchedule` iz domena, a neispravan raspored ostavlja stari netaknut.
+
+Baza dodatno čuva ono što ume da izrazi: strani ključevi, `CHECK (start_time < end_time)`, `CHECK` nad dozvoljenim tekstom stanja, `CHECK (total_price >= 0)`.
 
 Klijent proverava ista pravila nad podacima koje ima, samo da bi korisnik odmah video grešku. Klijent ne odlučuje.
 
-**Obrazloženje.** MySQL nema ograničenje isključivanja za intervale (kao `EXCLUDE` u PostgreSQL-u), pa preklapanje ne može da se izrazi kao `UNIQUE`. Zaključavanje reda terena serijalizuje samo upise za **isti teren**, a upisi za druge terene idu paralelno.
+**Obrazloženje.** Isto kao u primeru sa vežbi: pravilo piše domen, a baza garantuje da se ni pri istovremenim pozivima ne upišu dve aktivne rezervacije koje se preklapaju. Zaštita ne zavisi od toga da li neko kasnije u serveru zaboravi zaključavanje, a upisi za različite terene i korisnike idu paralelno.
 
 **Odbačeno.**
 - *Samo provera u klijentu.* Dva klijenta ne vide tuđe zahteve u istom trenutku, a poziv mimo aplikacije (curl) bi prošao.
+- *MySQL i zaključavanje reda terena i korisnika (`SELECT … FOR UPDATE`).* Tako je bilo u prvoj verziji. Radi, ali zaštita postoji samo dok svaki upis u serveru zaključa prave redove istim redosledom; test sa paralelnim pozivima je u toj verziji otkrio da je zaključavanje samo terena propuštalo istog korisnika na dva terena. `EXCLUDE` u PostgreSQL-u to čuva u samoj bazi.
 - *Okidač (trigger) u bazi koji odbija preklapanje.* Pravilo bi postojalo dvaput (SQL i Dart), greška iz okidača se teško prevodi u kod za klijenta, i teže je testirati.
-- *Nivo izolacije `SERIALIZABLE` za celu bazu.* Radi, ali zaključava šire nego što treba i vraća deadlock greške koje bi server morao da ponavlja.
-- *Zaključati samo teren.* Tako je bilo u prvoj verziji, i test sa paralelnim pozivima je pokazao da isti korisnik istovremeno dobija dve rezervacije u isto vreme na dva terena.
+- *Nivo izolacije `SERIALIZABLE` za celu bazu.* Radi, ali vraća greške serijalizacije koje bi server morao da ponavlja.
 
-**Kako je provereno** (`apps/server/test/concurrency_test.dart`, nad pravim MySQL-om):
-- 12 korisnika istovremeno traži isti termin istog terena: upisuje se tačno jedna rezervacija, ostalih 11 dobija `SlotAlreadyTaken` (na mreži `409 slot_taken`), nijedan ne dobija neočekivanu grešku.
-- 12 istovremenih termina koji se samo delimično preklapaju: prolazi jedan.
-- Isti termin na dva različita terena: prolaze oba (zaključavanje ne usporava nepovezane upise).
-- Isti korisnik istovremeno na dva terena u isto vreme: prolazi jedan.
-- Otkazivanje i potvrda iste rezervacije istovremeno: stanje u bazi odgovara ishodu koji su klijenti dobili.
+**Kako je provereno** (`apps/server/test/server_test.dart`, preko HTTP-a nad PostgreSQL-om):
+- deset korisnika istovremeno traži isti termin istog terena: upisuje se tačno jedna rezervacija, ostalih devet dobija `409 slot_taken`;
+- isti korisnik istovremeno traži isti sat na dva terena: prolazi jedna;
+- dva vlasnika istovremeno potvrđuju i odbijaju istu rezervaciju: jedan uspe, drugi dobija `409 invalid_status_transition`.
 
 ## 3. Šta vidi zakasneli klijent
 
@@ -89,9 +90,9 @@ Filtriranje radi **server**, na osnovu identiteta iz tokena. Isti URL (`GET /res
 
 Nepoznat kod stanja (npr. server doda novo stanje, a aplikacija je starija) **ne obara klijent**: `contract` ga čuva kao nepoznatu vrednost, a klijent prikazuje opštu oznaku („Nepoznato stanje“) i ne nudi akcije.
 
-U bazi: novac je `INT` (dinari), trenuci su `DATETIME` u UTC, stanja su `VARCHAR` sa istim kodovima kao na mreži.
+U bazi: novac je `integer` (dinari), trenuci su `timestamptz`, stanja su `text` sa istim kodovima kao na mreži.
 
-**Vremenska zona.** Radno vreme je lokalno, a trenuci su u UTC. Server radi u zoni `Europe/Belgrade` (`TZ` u kontejneru) i pre poziva pravila radnog vremena pretvara trenutke u lokalno vreme, tako da se pravilo iz `domain` ne menja.
+**Vremenska zona.** Radno vreme je lokalno, a trenuci su u UTC. Server radi u zoni `Europe/Belgrade` (`TZ` i podatak o zoni u Docker slici) i pre poziva pravila radnog vremena pretvara trenutke u lokalno vreme, tako da se pravilo iz `domain` ne menja.
 
 **Odbačeno.**
 - *Novac kao `double`.* Greške zaokruživanja (0,1 + 0,2), a dinari nemaju potrebu za decimalama.
@@ -194,11 +195,11 @@ Mobilna i desktop aplikacija ne podležu CORS-u, ali dobijaju ista zaglavlja.
 
 Pad servisa ne poništava potvrdu: rezervacija se prvo upiše (transakcija se završi), pa se zatim šalje obaveštenje, a greška slanja se samo zapiše u log. Slanje ima vremensko ograničenje od 5 sekundi, pa servis koji ne odgovara ne zadržava odgovor vlasniku. Bez ključa obaveštenje se ne šalje, a potvrda i dalje prolazi.
 
-Potvrda i odbijanje (`ReservationDecisions` u serveru) važe samo za rezervaciju **na čekanju**, i to se proverava u istoj zaključanoj transakciji kao i upis, pa vlasnik ne može da „odbije“ rezervaciju koja je u međuvremenu potvrđena. Razlog odbijanja se čuva u `cancellation_reason`.
+Potvrda i odbijanje važe samo za rezervaciju **na čekanju**, a upis je uslovljen tim stanjem, pa vlasnik ne može da „odbije“ rezervaciju koja je u međuvremenu potvrđena. Razlog odbijanja se čuva u `cancellation_reason`.
 
 **Odbačeno.**
 - *Klijent sam šalje e-poštu preko servisa.* Ključ bi morao da bude u aplikaciji, pa bi ga svako mogao izvući iz APK-a ili iz JavaScript-a u pregledaču.
-- *Slanje unutar transakcije, pa poništavanje potvrde ako slanje ne uspe.* Spor ili nedostupan servis bi držao zaključan teren i obarao potvrde, a obaveštenje je sporedno u odnosu na samu rezervaciju.
+- *Slanje unutar transakcije, pa poništavanje potvrde ako slanje ne uspe.* Spor ili nedostupan servis bi držao otvorenu transakciju i obarao potvrde, a obaveštenje je sporedno u odnosu na samu rezervaciju.
 
 ## 13. Greške na mreži
 
@@ -241,3 +242,15 @@ Poruku na srpskom pravi klijent iz koda, istom funkcijom kao kada pravilo prover
 **Odbačeno.**
 - *Računanje u klijentu.* Klijent bi morao da preuzme sve rezervacije svih terena za ceo period, uključujući tuđe podatke, samo da bi prikazao nekoliko brojeva.
 - *Ceo proračun u jednom SQL upitu.* Radno vreme po danima, blokade i rezervacije preko granice perioda teško se izražavaju u SQL-u, a pravilo bi postojalo i u SQL-u i u domenu. Ovako je ista funkcija proverena unit testovima bez baze.
+
+## 15. Baza, migracije i početni podaci
+
+**Odluka.** Kao u primeru sa vežbi:
+- baza je **PostgreSQL 17**, a `compose.yaml` podiže servise `db`, `migrate` i `server` (i `adminer` uz `--profile tools`);
+- šema je u `apps/server/migrations` u formatu alata **dbmate** (`-- migrate:up` / `-- migrate:down`), a servis `migrate` je primeni pa izađe; server kreće tek kada migracije uspeju;
+- početne podatke upisuje server kada je baza prazna (`seed.dart`): 11 rezervacija u sva četiri stanja, nalog za svaku ulogu i tri korisnika mobilne aplikacije, sa lozinkom iz `DEMO_PASSWORD` (u bazi samo Argon2id heš);
+- server se gradi u slici `dart:3.13.5`, a radi u praznoj slici (`scratch`) kao korisnik bez administratorskih prava.
+
+**Odbačeno.**
+- *MySQL sa pokretačem migracija u samom serveru.* Prva verzija. Server je morao da zna redosled i istoriju migracija i da ih štiti od dva istovremena pokretanja; dbmate to već radi i odvaja šemu od koda servera.
+- *Početni podaci kao SQL migracija.* Datumi bi bili fiksni i zastareli bi posle nekoliko dana; seed u serveru pravi termine u odnosu na trenutni datum.
