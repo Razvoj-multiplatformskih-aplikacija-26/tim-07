@@ -177,3 +177,91 @@ Vremenska pravila životnog ciklusa (`resolveReservationStatus`, računaju se na
 - `ReservationBloc` vodi učitavanje i promenu statusa rezervacije; stanja su `Equatable`.
 - Podaci stižu kroz `ReservationRepository` (`abstract interface class`), pa se implementacija menja bez izmene ekrana.
 - Ekrani samo šalju događaje i crtaju stanje.
+
+## Implementacija KT2
+
+Server i baza su izvor istine za oba klijenta. Server koristi isti domenski paket kao aplikacije i pre svakog upisa proverava pravila iz KT1; o preklapanju termina konačno odlučuje baza (`EXCLUDE` u PostgreSQL-u). Odluke za svaki red „Zavisno od teme“ su u [`docs/kt2-decisions.md`](docs/kt2-decisions.md).
+
+### Pokretanje
+
+Potrebni su Docker (Docker Desktop na Windows-u i macOS-u) i Flutter 3.47.
+
+#### Baza i server
+
+Iz korena repozitorijuma:
+
+```sh
+cp .env.example .env    # Windows: copy .env.example .env
+docker compose up -d
+```
+
+`compose.yaml` podiže tri servisa:
+
+| Servis | Šta radi | Adresa |
+| ------ | -------- | ------ |
+| `db` | PostgreSQL 17 | `localhost:5434` |
+| `migrate` | dbmate primeni migracije iz `apps/server/migrations`, pa izlazi | — |
+| `server` | server u Dartu na Relic-u, slika iz `apps/server/Dockerfile` | http://localhost:8080 |
+
+Lozinka baze, `DEMO_PASSWORD`, `JWT_SECRET` i portovi su u `.env`, koji nije u git-u. Kada je baza prazna, server upisuje početne podatke.
+
+Provera: `docker compose ps -a` (servis `migrate` je `Exited (0)`) i `curl localhost:8080/health` (odgovor `ok`; u PowerShell-u `curl.exe`).
+
+| Komanda | Šta radi |
+| ------- | -------- |
+| `docker compose logs server` | ispis servera; `logs migrate` za migracije |
+| `docker compose up -d --build server` | nova slika servera posle izmene u `apps/server` ili u paketima |
+| `docker compose down` | gasi sistem, podaci ostaju |
+| `docker compose down -v` | gasi sistem i briše bazu; sledeći `up -d` kreće od nule |
+
+Baza u pregledaču: `docker compose --profile tools up -d adminer`, pa http://127.0.0.1:8082. SQL iz terminala: `docker compose exec db psql -U terenzo -d terenzo`.
+
+Server bez kontejnera:
+
+```sh
+docker compose stop server
+cd apps/server
+dart run bin/server.dart    # Ctrl+C zaustavlja
+```
+
+Testovi servera traže pokrenutu bazu i rade nad posebnom bazom `terenzo_test`: u `apps/server` pokrenuti `dart test`.
+
+#### Aplikacije
+
+Svaka aplikacija u svom terminalu, iz korena repozitorijuma:
+
+```sh
+cd apps/backoffice
+flutter run -d macos    # ili -d windows, ili -d chrome --web-port 8081
+```
+
+```sh
+cd apps/mobile
+flutter run
+```
+
+Backoffice nalazi server na `http://localhost:8080`; druga adresa se zadaje sa `--dart-define=SERVER_URL=http://<adresa>:8080`. Pregledač sme da zove server samo sa adrese iz `CORS_ORIGINS` u `.env`, pa se backoffice u pregledaču pokreće na portu 8081.
+
+#### Demo nalozi
+
+Lozinka za sve naloge je vrednost `DEMO_PASSWORD` iz `.env` (`terenzo-demo`).
+
+| Nalog | Uloga | Aplikacija |
+| ----- | ----- | ---------- |
+| `korisnik1@terenzo.rs`, `korisnik2@terenzo.rs`, `korisnik3@terenzo.rs` | korisnik | mobilna |
+| `vlasnik1@terenzo.rs` (Arena Fudbal, Basket Park) | vlasnik | backoffice |
+| `vlasnik2@terenzo.rs` (Tenis Centar, Padel Klub) | vlasnik | backoffice |
+| `admin@terenzo.rs` | administrator | backoffice |
+
+Backoffice odbija prijavu korisnika mobilne aplikacije, a mobilna aplikacija prijavu osoblja.
+
+### Struktura u KT2
+
+| Folder | Sadržaj |
+| ------ | ------- |
+| `apps/server` | Relic server nad PostgreSQL-om: rute, prijava (Argon2id, JWT), početni podaci, testovi scenarija sa odbrane |
+| `packages/contract` | zahtevi, odgovori i greške na mreži; ne uvozi domen, Flutter ni `dart:io` |
+| `packages/mapping` | prevod između `contract` i domena u oba smera, i za greške |
+| `packages/messages` | poruka za korisnika iz koda greške, ista za klijent i server |
+| `packages/api_client` | HTTP implementacija portova, radi na VM-u i u pregledaču |
+| `packages/session_storage` | čuvanje prijave: bezbedno skladište platforme ili skladište pregledača |
