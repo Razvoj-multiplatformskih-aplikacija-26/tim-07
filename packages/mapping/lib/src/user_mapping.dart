@@ -34,7 +34,7 @@ extension UserDtoMapping on UserDto {
     phoneNumber: phoneNumber ?? '',
     dateOfBirth: DateTime.utc(1970),
     role: requireKnown(roleFromCode(role), 'role', role),
-    createdAt: createdAt ?? DateTime.utc(1970),
+    createdAt: createdAt?.toLocal() ?? DateTime.utc(1970),
     // Stanje stiže samo u listi za administratora; bez njega je nalog aktivan.
     isActive: isActive ?? true,
   );

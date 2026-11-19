@@ -421,6 +421,28 @@ void main() {
       expect(ApiPaths.user(7), '/users/7');
     });
 
+    test('promena radnog vremena preko rezervacija je 409 sa podacima za poruku', () {
+      expect(httpStatusFor(ErrorCodes.scheduleConflictsWithReservations), 409);
+      expect(ErrorCodes.all, contains('schedule_conflicts_with_reservations'));
+
+      final error = ErrorDto.fromJson(
+        wire(
+          const ErrorDto(
+            code: ErrorCodes.scheduleConflictsWithReservations,
+            details: {
+              ErrorDetailKeys.count: 2,
+              ErrorDetailKeys.date: '2026-11-20',
+              ErrorDetailKeys.time: '15:00',
+            },
+          ).toJson(),
+        ),
+      );
+
+      expect(error.isKnown, isTrue);
+      expect(error.detailInt(ErrorDetailKeys.count), 2);
+      expect(error.details[ErrorDetailKeys.date], '2026-11-20');
+    });
+
     test('deaktiviran nalog je 403, ne 401', () {
       expect(httpStatusFor(ErrorCodes.accountDeactivated), 403);
     });

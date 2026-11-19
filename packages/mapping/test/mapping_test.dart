@@ -124,14 +124,20 @@ void main() {
         expect(back.id, original.id);
         expect(back.fieldId, original.fieldId);
         expect(back.userId, original.userId);
-        expect(back.startTime, original.startTime);
-        expect(back.endTime, original.endTime);
+        // Isti trenutak, ali u lokalnom vremenu klijenta, ne u UTC.
+        expect(back.startTime.isAtSameMomentAs(original.startTime), isTrue);
+        expect(back.endTime.isAtSameMomentAs(original.endTime), isTrue);
+        expect(back.startTime.isUtc, isFalse);
         expect(back.totalPrice, original.totalPrice);
         expect(back.status, status);
         expect(back.paymentStatus, PaymentStatus.paid);
-        expect(back.checkedInAt, original.checkedInAt);
+        if (original.checkedInAt case final checkedIn?) {
+          expect(back.checkedInAt!.isAtSameMomentAs(checkedIn), isTrue);
+        } else {
+          expect(back.checkedInAt, isNull);
+        }
         expect(back.cancellationReason, original.cancellationReason);
-        expect(back.createdAt, original.createdAt);
+        expect(back.createdAt.isAtSameMomentAs(original.createdAt), isTrue);
       }
     });
 
@@ -303,7 +309,22 @@ void main() {
 
       expect(back.fieldId, const FieldId(3));
       expect(back.reason, 'Održavanje');
-      expect(back.endTime, DateTime.utc(2026, 11, 21, 12));
+      expect(back.endTime.isAtSameMomentAs(DateTime.utc(2026, 11, 21, 12)), isTrue);
+      expect(back.endTime.isUtc, isFalse);
+    });
+
+    test('blokada i rezervacija sa servera se prikazuju u lokalnom vremenu', () {
+      // 07:00Z je 08:00 po beogradskom vremenu zimi, a na računaru sa tom zonom
+      // ekran mora da pokaže 08:00, ne 07:00.
+      final block = BlockedPeriodDto.fromJson({
+        'fieldId': 3,
+        'startTime': '2026-11-26T07:00:00.000Z',
+        'endTime': '2026-11-26T11:00:00.000Z',
+      }).toDomain();
+
+      expect(block.startTime, DateTime.utc(2026, 11, 26, 7).toLocal());
+      expect(block.startTime.hour, DateTime.utc(2026, 11, 26, 7).toLocal().hour);
+      expect(block.startTime.isUtc, isFalse);
     });
 
     test('zahtev za blokadu dobija teren iz adrese', () {
@@ -545,6 +566,25 @@ void main() {
 
       expect(dto.detailInt(ErrorDetailKeys.opensHours), 24);
       expect(dto.detailInt(ErrorDetailKeys.closesHours), 5);
+    });
+
+    test('sukob radnog vremena i rezervacija nosi broj i najraniju rezervaciju', () {
+      final conflict = ScheduleConflictsWithReservations(
+        count: 3,
+        firstStart: DateTime(2026, 11, 20, 15),
+      );
+
+      final dto = conflict.toErrorDto();
+
+      expect(dto.code, ErrorCodes.scheduleConflictsWithReservations);
+      expect(dto.detailInt(ErrorDetailKeys.count), 3);
+      expect(dto.details[ErrorDetailKeys.date], '2026-11-20');
+      expect(dto.details[ErrorDetailKeys.time], '15:00');
+      expect(failureOf(ScheduleRuleViolation(conflict))?.error.code, ErrorCodes.scheduleConflictsWithReservations);
+    });
+
+    test('ostale greške radnog vremena i dalje nisu greška za mrežu', () {
+      expect(failureOf(const ScheduleRuleViolation(OpeningAfterClosing(WeekDay.monday))), isNull);
     });
 
     test('nepoznat kod nije pravilo (stara verzija aplikacije)', () {

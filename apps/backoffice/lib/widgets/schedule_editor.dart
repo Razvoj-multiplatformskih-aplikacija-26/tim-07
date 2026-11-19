@@ -23,6 +23,7 @@ String scheduleErrorLabel(ScheduleValidationError error) => switch (error) {
   InvalidTimeOfDay(:final day) => '${dayLabels[day]}: neispravno vreme.',
   DuplicateScheduleDay(:final day) => '${dayLabels[day]}: dan je naveden dvaput.',
   ScheduleForOtherField() => 'Radno vreme pripada drugom terenu.',
+  ScheduleConflictsWithReservations() => 'Radno vreme se ne poklapa sa postojećim rezervacijama.',
 };
 
 class ScheduleEditor extends StatefulWidget {

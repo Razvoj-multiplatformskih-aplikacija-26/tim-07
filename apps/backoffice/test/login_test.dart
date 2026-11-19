@@ -89,7 +89,7 @@ void main() {
     await signIn(tester, 'korisnik@terenzo.rs');
 
     expect(find.byType(DataTable), findsNothing);
-    expect(find.text('Backoffice je za vlasnike i administratore sportskih objekata.'), findsOneWidget);
+    expect(find.text('Pristup odbijen.'), findsOneWidget);
   });
 
   testWidgets('istekla prijava vraća na prijavu uz poruku', (tester) async {

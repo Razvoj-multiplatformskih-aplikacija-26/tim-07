@@ -818,7 +818,11 @@ void main() {
       expect(reservation.id, const ReservationId(12));
       expect(reservation.status, ReservationStatus.pending);
       expect(reservation.totalPrice, 4500);
-      expect(reservation.startTime, DateTime.utc(2026, 11, 20, 17));
+      expect(
+        reservation.startTime.isAtSameMomentAs(DateTime.utc(2026, 11, 20, 17)),
+        isTrue,
+      );
+      expect(reservation.startTime.isUtc, isFalse);
     });
   });
 

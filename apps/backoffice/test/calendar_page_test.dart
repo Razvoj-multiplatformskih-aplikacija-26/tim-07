@@ -173,6 +173,55 @@ void main() {
       expect(find.byType(DropdownButton<FieldId>), findsOneWidget);
     });
 
+    testWidgets(
+      'svih sedam dana stane u prozor od 1280 piksela, bez pomeranja',
+      (tester) async {
+        await pumpCalendar(tester, size: const Size(1280, 800));
+        await tester.tap(find.text('Nedelja'));
+        await tester.pumpAndSettle();
+
+        final monday = CalendarBloc.weekStart(today);
+        for (var i = 0; i < 7; i++) {
+          final date = DateTime(monday.year, monday.month, monday.day + i);
+          final header = find.text(
+            '${weekdayShort(date)} ${formatDayMonth(date)}',
+          );
+          final right = tester.getTopRight(header).dx;
+          expect(right, lessThanOrEqualTo(1280), reason: 'dan ${i + 1}');
+          expect(tester.getTopLeft(header).dx, greaterThanOrEqualTo(0));
+        }
+      },
+    );
+
+    testWidgets(
+      'u užem prozoru sedmi dan se dostiže prevlačenjem, a traka je vidljiva',
+      (tester) async {
+        await pumpCalendar(tester, size: const Size(900, 800));
+        await tester.tap(find.text('Nedelja'));
+        await tester.pumpAndSettle();
+        final monday = CalendarBloc.weekStart(today);
+        final sunday = DateTime(monday.year, monday.month, monday.day + 6);
+        final last = find.text(
+          '${weekdayShort(sunday)} ${formatDayMonth(sunday)}',
+        );
+        final before = tester.getTopLeft(last).dx;
+        expect(
+          before,
+          greaterThan(560),
+          reason: 'nedelja je izvan vidljive oblasti',
+        );
+
+        await tester.drag(
+          find.text('Pon ${formatDayMonth(monday)}'),
+          const Offset(-600, 0),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.getTopLeft(last).dx, lessThan(before));
+        expect(find.byType(Scrollbar), findsWidgets);
+      },
+    );
+
     testWidgets('pomeranje po nedeljama menja opseg', (tester) async {
       await pumpCalendar(tester);
       await tester.tap(find.text('Nedelja'));

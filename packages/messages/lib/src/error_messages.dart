@@ -22,7 +22,7 @@ String signInNotAllowedMessage(ClientApp app) => switch (app) {
   ClientApp.mobile =>
       'Ova aplikacija je za korisnike. Osoblje se prijavljuje u backoffice.',
   ClientApp.backoffice =>
-      'Backoffice je za vlasnike i administratore sportskih objekata.',
+      'Pristup odbijen.',
 };
 
 /// Broj sati sa ispravnim oblikom reči: 1 sat, 2 sata, 5 sati, 21 sat, 11 sati.
@@ -62,6 +62,7 @@ String errorMessage(ErrorDto error) => switch (error.code) {
   ErrorCodes.blockInPast => 'Blokada mora da obuhvata budući termin.',
   ErrorCodes.blockOverlapsReservation =>
     'U izabranom periodu već postoji potvrđena rezervacija.',
+  ErrorCodes.scheduleConflictsWithReservations => _scheduleConflictMessage(error),
   ErrorCodes.forbidden => 'Nemate pravo na ovu radnju.',
   ErrorCodes.notFound => 'Traženi zapis nije pronađen.',
   ErrorCodes.unauthenticated => 'Prijavite se da biste nastavili.',
@@ -74,6 +75,31 @@ String errorMessage(ErrorDto error) => switch (error.code) {
   ErrorCodes.payloadTooLarge => 'Poslati podaci su preveliki.',
   _ => genericErrorMessage,
 };
+
+String _scheduleConflictMessage(ErrorDto error) {
+  final count = error.detailInt(ErrorDetailKeys.count) ?? 0;
+  final date = error.details[ErrorDetailKeys.date];
+  final time = error.details[ErrorDetailKeys.time];
+
+  final last = count % 10;
+  final lastTwo = count % 100;
+  final what = count == 1
+      ? 'jednu postojeću rezervaciju'
+      : (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14))
+      ? '$count postojeće rezervacije'
+      : '$count postojećih rezervacija';
+
+  var first = '';
+  if (date is String && time is String) {
+    final parts = date.split('-');
+    if (parts.length == 3) {
+      first = ' (najranija: ${parts[2]}.${parts[1]}.${parts[0]}. u $time)';
+    }
+  }
+
+  return 'Radno vreme nije sačuvano: novo radno vreme ne obuhvata $what$first. '
+      'Prvo otkažite ili odbijte te rezervacije, ili zadržite radno vreme koje ih obuhvata.';
+}
 
 String _cancellationMessage(ErrorDto error) {
   final hours = error.detailInt(ErrorDetailKeys.hours);
@@ -105,6 +131,8 @@ String validationMessage(ReservationValidationError error) =>
 String describeError(Object error) => switch (error) {
   ReservationRuleViolation(:final error) => validationMessage(error),
   BlockedPeriodRuleViolation(:final error) => errorMessage(error.toErrorDto()),
+  ScheduleRuleViolation(error: final ScheduleConflictsWithReservations conflict) =>
+    errorMessage(conflict.toErrorDto()),
   ServerRejectedException(:final error) => errorMessage(error),
   ServerUnreachableException() => serverUnreachableMessage,
   EntityNotFound() => errorMessage(const ErrorDto(code: ErrorCodes.notFound)),
