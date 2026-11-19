@@ -110,6 +110,55 @@ void main() {
     await database.close();
   });
 
+  group('početni podaci', () {
+    // Ova grupa ide prva, dok u bazi ima samo ono što je upisao `seedDemoData`.
+    test('the database has at least 10 reservations and every one of the 4 states', () async {
+      final rows = await database.execute(
+        "SELECT status, count(*) FROM reservations GROUP BY status",
+      );
+      final byStatus = {for (final row in rows) row[0]! as String: row[1]! as int};
+
+      expect(byStatus.values.fold<int>(0, (sum, count) => sum + count), greaterThanOrEqualTo(10));
+      expect(byStatus.keys, containsAll(['pending', 'confirmed', 'completed', 'cancelled']));
+    });
+
+    test('there is an account for each role and at least two for the mobile app', () async {
+      final rows = await database.execute('SELECT role, count(*) FROM users GROUP BY role');
+      final byRole = {for (final row in rows) row[0]! as String: row[1]! as int};
+
+      expect(byRole['admin'], greaterThanOrEqualTo(1));
+      expect(byRole['owner'], greaterThanOrEqualTo(1));
+      expect(byRole['user'], greaterThanOrEqualTo(2));
+    });
+
+    test('every demo account from the README exists and can log in', () async {
+      for (final account in demoAccounts) {
+        final token = await logIn(account.email);
+        expect(token, isNotEmpty, reason: account.email);
+      }
+    });
+
+    test('passwords are stored only as hashes, never as plain text', () async {
+      final rows = await database.execute('SELECT email, password_hash FROM users');
+
+      for (final row in rows) {
+        final hash = row[1]! as String;
+        expect(hash, isNot(demoPassword), reason: row[0]! as String);
+        expect(hash, isNot(contains(demoPassword)), reason: row[0]! as String);
+        expect(hash, startsWith(r'$argon2id$'), reason: row[0]! as String);
+      }
+    });
+
+    test('the seed runs only on an empty database, so a restart does not duplicate anything', () async {
+      final before = await database.execute('SELECT count(*) FROM users');
+
+      await seedDemoData(database, now: DateTime.now(), demoPassword: demoPassword);
+
+      final after = await database.execute('SELECT count(*) FROM users');
+      expect(after.single[0], before.single[0]);
+    });
+  });
+
   group('pravila na serveru', () {
     test('ten users book the same slot at the same moment: the database lets exactly one in', () async {
       final arena = await fieldId('Arena Fudbal');

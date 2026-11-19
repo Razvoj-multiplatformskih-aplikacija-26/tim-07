@@ -51,6 +51,19 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('posle prijave imena korisnika ne dolaze iz demo podataka', (tester) async {
+    await pumpApp(tester);
+
+    await signIn(tester, 'vlasnik@terenzo.rs');
+
+    // Rezervacija 1 pripada korisniku 1. Demo korisnik 1 je „Jovan Petrović“, ali
+    // nad serverom korisnik 1 može biti bilo ko, pa se tuđe ime ne izmišlja.
+    expect(find.text('Jovan Petrović'), findsNothing);
+    expect(find.text('Korisnik #1'), findsWidgets);
+    // Tereni se čitaju iz izvora podataka, pa imaju prava imena.
+    expect(find.text('Arena Fudbal'), findsWidgets);
+  });
+
   testWidgets('bez prijave backoffice prikazuje ekran prijave', (tester) async {
     await pumpApp(tester);
 
