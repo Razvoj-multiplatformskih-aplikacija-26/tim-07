@@ -187,10 +187,14 @@ final class TerenzoHandlers {
       fieldName: (id) => fields[id]?.name ?? '',
       userOf: (id) => users[id],
     );
+    // Osoblje terena vidi ko je rezervisao; korisnik svoje rezervacije dobija bez toga.
+    final shown = [
+      for (final reservation in page.items) _forViewer(reservation, actor, users[reservation.userId]),
+    ];
     return json(
       200,
       PageDto(
-        items: page.items,
+        items: shown,
         total: page.total,
         limit: page.limit,
         offset: page.offset,
@@ -199,8 +203,10 @@ final class TerenzoHandlers {
   }
 
   Future<Response> reservation(Request request) async {
-    final (reservation, _) = await _visibleReservation(request, actorOf(request));
-    return json(200, reservation.toDto().toJson());
+    final actor = actorOf(request);
+    final (reservation, _) = await _visibleReservation(request, actor);
+    final customer = await terenzo.getUserById(reservation.userId);
+    return json(200, _forViewer(reservation, actor, customer).toDto().toJson());
   }
 
   Future<Response> createReservation(Request request) async {
@@ -377,6 +383,12 @@ final class TerenzoHandlers {
   if (offset < 0) throw Refused.badRequest(ApiQuery.offset);
   return (limit, offset);
 }
+
+/// Rezervacija kako je vidi [viewer]: ko nije sam rezervisao (vlasnik terena,
+/// administrator) dobija i podatke o korisniku, a korisnik svoju rezervaciju
+/// bez njih. Tuđe podatke ne dobija niko drugi, jer ostali ni ne vide rezervaciju.
+Reservation _forViewer(Reservation reservation, AppUser viewer, AppUser? customer) =>
+    viewer.id == reservation.userId ? reservation : reservation.withCustomer(customer);
 
 Response _page<T>(Request request, List<T> items, Map<String, Object?> Function(T item) toJson) {
   final (limit, offset) = _pageParams(request);

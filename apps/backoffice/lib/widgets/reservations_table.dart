@@ -96,7 +96,7 @@ class ReservationsTable extends StatelessWidget {
                         ),
                         DataCell(
                           Text(
-                            directory.userName(reservation.userId),
+                            directory.customerName(reservation),
                           ),
                         ),
                         DataCell(Text(formatDate(reservation.startTime))),

@@ -259,7 +259,7 @@ Backoffice odbija prijavu korisnika mobilne aplikacije, a mobilna aplikacija pri
 
 Kada je baza prazna, server pri podizanju upisuje početne podatke (`apps/server/lib/src/seed.dart`): 6 naloga (3 korisnika, 2 vlasnika, administrator), 4 terena (jedan čeka odobrenje), 11 rezervacija u sva četiri stanja (završene, otkazane, na čekanju i potvrđene, relativno u odnosu na dan podizanja), jedna blokada terena i radno vreme svih terena. Lozinke se upisuju samo kao Argon2id heš. Ponovno podizanje servera ne dodaje ništa, jer se seed izvršava samo nad praznom bazom.
 
-Klijenti više ne nose ove podatke: mobilna aplikacija i backoffice čitaju sve sa servera. `MobileDemoData`, `BackofficeDemoData` i `demo_data.dart` ostaju samo kao izvor za lažne repozitorijume u testovima i za demo režim backoffice-a bez prijave; ime korisnika pored rezervacije se ne uzima iz njih kada postoji server.
+Klijenti više ne nose ove podatke: mobilna aplikacija i backoffice čitaju sve sa servera. `MobileDemoData`, `BackofficeDemoData` i `demo_data.dart` ostaju samo kao izvor za lažne repozitorijume u testovima i za demo režim backoffice-a bez prijave; ime korisnika pored rezervacije se ne uzima iz njih kada postoji server: vlasnik terena i administrator dobijaju ga uz samu rezervaciju (`ReservationDto.customer`), a korisnik svoju rezervaciju vidi bez tog bloka.
 
 ### Struktura u KT2
 

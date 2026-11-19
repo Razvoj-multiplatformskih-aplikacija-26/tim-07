@@ -97,7 +97,7 @@ class _Details extends StatelessWidget {
     final directory = context.watch<DirectoryCubit>().state;
     final theme = Theme.of(context);
     final field = directory.field(reservation.fieldId);
-    final user = directory.user(reservation.userId);
+    final user = directory.customerOf(reservation);
     final transitions = allowedTransitions(reservation);
 
     return ListView(

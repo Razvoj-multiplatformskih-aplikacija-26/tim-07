@@ -476,6 +476,37 @@ void main() {
       expect(result.items.map((r) => r.id.value), [1]);
     });
 
+    test('vlasnik dobija i korisnika uz rezervaciju', () async {
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(
+            200,
+            page([
+              {
+                ...reservationJson(id: 1),
+                'customer': {
+                  'id': 2,
+                  'firstName': 'Ana',
+                  'lastName': 'Anić',
+                  'email': 'ana@example.com',
+                  'role': 'user',
+                  'phoneNumber': '064',
+                },
+              },
+              reservationJson(id: 2),
+            ]),
+          ),
+        ),
+        session: await signedIn(),
+      );
+
+      final all = await HttpReservationRepository(api).getReservations();
+
+      expect(all.first.customer?.fullName, 'Ana Anić');
+      expect(all.first.customer?.phoneNumber, '064');
+      expect(all.last.customer, isNull);
+    });
+
     test('jedna strana nosi ukupan broj za tabelu', () async {
       late Uri seen;
       final api = clientFor(

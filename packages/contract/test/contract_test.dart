@@ -360,6 +360,32 @@ void main() {
       expect(session.token, isNull);
     });
 
+    test('rezervacija nosi korisnika samo kada ga server pošalje', () {
+      final base = {
+        'id': 1,
+        'fieldId': 2,
+        'userId': 4,
+        'startTime': '2026-12-01T10:00:00.000Z',
+        'endTime': '2026-12-01T11:00:00.000Z',
+        'totalPrice': 3000,
+        'status': 'pending',
+        'paymentStatus': 'unpaid',
+        'createdAt': '2026-11-01T00:00:00.000Z',
+      };
+
+      final without = ReservationDto.fromJson(base);
+      expect(without.customer, isNull);
+      expect(without.toJson().keys, isNot(contains('customer')));
+
+      final withCustomer = ReservationDto.fromJson({...base, 'customer': userJson});
+      expect(withCustomer.customer?.email, userJson['email']);
+      expect(withCustomer.toJson()['customer'], isA<Map<String, Object?>>());
+      expect(
+        () => ReservationDto.fromJson({...base, 'customer': 'Ana'}),
+        throwsFormatException,
+      );
+    });
+
     test('nalog nikad ne nosi lozinku ni heš', () {
       final json = UserDto.fromJson(userJson).toJson();
 
