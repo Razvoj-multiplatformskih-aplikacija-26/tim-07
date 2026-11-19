@@ -32,6 +32,12 @@ dependencies:
     path: ../../packages/domain
   blocs:
     path: ../../packages/blocs
+  api_client:
+    path: ../../packages/api_client
+  session_storage:
+    path: ../../packages/session_storage
+  messages:
+    path: ../../packages/messages
   flutter_bloc: ^9.1.1
   equatable: ^2.0.7
   flutter:

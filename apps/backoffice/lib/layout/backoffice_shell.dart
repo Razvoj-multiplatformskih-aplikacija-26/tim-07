@@ -1,4 +1,6 @@
+import 'package:blocs/blocs.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../screens/placeholder_page.dart';
 import '../screens/reservations_page.dart';
@@ -65,6 +67,12 @@ class _BackofficeShellState extends State<BackofficeShell> {
                 Icons.sports_soccer,
                 size: 32,
                 color: colors.primary,
+              ),
+            ),
+            trailing: const Expanded(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(padding: EdgeInsets.only(bottom: 16), child: _Account()),
               ),
             ),
             destinations: [
@@ -151,6 +159,42 @@ class _Header extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _Account extends StatelessWidget {
+  const _Account();
+
+  @override
+  Widget build(BuildContext context) {
+    final AuthBloc auth;
+    try {
+      auth = BlocProvider.of<AuthBloc>(context);
+    } on Object {
+      return const SizedBox.shrink();
+    }
+    final user = auth.state.user;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (user != null)
+          SizedBox(
+            width: 88,
+            child: Text(
+              user.fullName,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        IconButton(
+          tooltip: 'Odjavi se',
+          icon: const Icon(Icons.logout),
+          onPressed: () => auth.add(const AuthLogoutRequested()),
+        ),
+      ],
     );
   }
 }

@@ -3,26 +3,79 @@ import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'data/directory.dart';
 import 'layout/backoffice_shell.dart';
+import 'screens/login_screen.dart';
 import 'selection/reservation_selection_bloc.dart';
 import 'theme/backoffice_theme.dart';
 
-class BackofficeApp extends StatelessWidget {
+class BackofficeApp extends StatefulWidget {
   final ReservationRepository repository;
+  final SportsFieldRepository? fieldRepository;
+  final AuthRepository? authRepository;
 
-  const BackofficeApp({super.key, required this.repository});
+  const BackofficeApp({super.key, required this.repository, this.fieldRepository, this.authRepository});
+
+  @override
+  State<BackofficeApp> createState() => _BackofficeAppState();
+}
+
+class _BackofficeAppState extends State<BackofficeApp> {
+  late final ReservationBloc _reservations = ReservationBloc(repository: widget.repository);
+  late final ReservationSelectionBloc _selection = ReservationSelectionBloc();
+  late final DirectoryCubit _directory = DirectoryCubit(
+    fieldRepository: widget.fieldRepository,
+    initial: widget.fieldRepository == null ? BackofficeDirectory.demo() : null,
+  );
+  late final AuthBloc? _auth = switch (widget.authRepository) {
+    final repository? => AuthBloc(repository: repository, app: ClientApp.backoffice)..add(const AuthStarted()),
+    null => null,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    if (_auth == null) _reservations.add(const ReservationsRequested());
+  }
+
+  @override
+  void dispose() {
+    _auth?.close();
+    _directory.close();
+    _selection.close();
+    _reservations.close();
+    super.dispose();
+  }
+
+  void _onAuthChanged(BuildContext context, AuthState state) {
+    if (state is AuthAuthenticated) {
+      _directory.load();
+      _reservations.add(const ReservationsRequested());
+    } else if (state is AuthUnauthenticated) {
+      _directory.clear();
+      _reservations.add(const ReservationsCleared());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final auth = _auth;
+    final home = auth == null
+        ? const BackofficeShell()
+        : BlocConsumer<AuthBloc, AuthState>(
+            listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+            listener: _onAuthChanged,
+            builder: (context, state) => state is AuthAuthenticated ? const BackofficeShell() : const LoginScreen(),
+          );
+
     return RepositoryProvider<ReservationRepository>.value(
-      value: repository,
+      value: widget.repository,
       child: MultiBlocProvider(
         providers: [
-          BlocProvider(
-            create: (_) => ReservationBloc(repository: repository)
-              ..add(const ReservationsRequested()),
-          ),
-          BlocProvider(create: (_) => ReservationSelectionBloc()),
+          BlocProvider.value(value: _reservations),
+          BlocProvider.value(value: _selection),
+          BlocProvider.value(value: _directory),
+          if (auth != null) BlocProvider.value(value: auth),
         ],
         child: MaterialApp(
           title: 'Terenzo backoffice',
@@ -30,7 +83,7 @@ class BackofficeApp extends StatelessWidget {
           theme: BackofficeTheme.lightTheme,
           darkTheme: BackofficeTheme.darkTheme,
           themeMode: ThemeMode.system,
-          home: const BackofficeShell(),
+          home: home,
         ),
       ),
     );
