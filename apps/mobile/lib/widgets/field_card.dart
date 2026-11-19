@@ -1,9 +1,13 @@
+import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
+
+import '../text/reservation_texts.dart';
+import 'sport_icon.dart';
 
 class FieldCard extends StatelessWidget {
   final String name;
   final String location;
-  final String sport;
+  final SportType sport;
   final int pricePerHour;
   final VoidCallback? onTap;
 
@@ -16,29 +20,10 @@ class FieldCard extends StatelessWidget {
     this.onTap,
   });
 
-  IconData get sportIcon {
-    switch (sport) {
-      case 'Fudbal':
-      case 'Futsal':
-        return Icons.sports_soccer;
-      case 'Košarka':
-        return Icons.sports_basketball;
-      case 'Tenis':
-        return Icons.sports_tennis;
-      case 'Padel':
-        return Icons.sports_tennis;
-      case 'Plivanje':
-        return Icons.pool;
-      case 'Odbojka':
-        return Icons.sports_volleyball;
-      default:
-        return Icons.sports;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final icon = sportIcon(sport);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -52,7 +37,7 @@ class FieldCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(sportIcon, size: 28, color: colorScheme.primary),
+                  Icon(icon, size: 28, color: colorScheme.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -72,8 +57,8 @@ class FieldCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Chip(
-                avatar: Icon(sportIcon, size: 18, color: colorScheme.primary),
-                label: Text(sport),
+                avatar: Icon(icon, size: 18, color: colorScheme.primary),
+                label: Text(sportLabel(sport)),
                 backgroundColor: colorScheme.primaryContainer,
                 side: BorderSide.none,
               ),

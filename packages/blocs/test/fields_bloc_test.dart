@@ -481,6 +481,150 @@ void main() {
     });
   });
 
+  group('sportovi iz podataka (brzi filter)', () {
+    test('availableSports: bez ponavljanja, redom iz SportType', () {
+      final fields = [tennis, padel, arena, tenis2, basket];
+
+      expect(availableSports(fields), [
+        SportType.football,
+        SportType.basketball,
+        SportType.tennis,
+        SportType.padel,
+      ]);
+      expect(availableSports(const []), isEmpty);
+    });
+
+    test('čipovi su sportovi koji postoje u katalogu', () async {
+      final bloc = await loaded();
+
+      expect(bloc.state.sports, [
+        SportType.football,
+        SportType.basketball,
+        SportType.tennis,
+        SportType.padel,
+      ]);
+      await bloc.close();
+    });
+
+    test(
+      'sport koji postoji samo na terenu koji nije javan nema čip',
+      () async {
+        store = FakeSportsFieldRepository(
+          fields: [
+            arena,
+            field(
+              6,
+              'Bazen',
+              SportType.swimming,
+              1800,
+              approval: ApprovalStatus.pending,
+            ),
+            field(7, 'Odbojka', SportType.volleyball, 2800, isActive: false),
+          ],
+        );
+        source = _ControlledRepository(store);
+
+        final bloc = await loaded();
+
+        expect(bloc.state.sports, [SportType.football]);
+        await bloc.close();
+      },
+    );
+
+    test('izbor sporta ne briše čipove, da se može vratiti', () async {
+      final bloc = await loaded();
+      final before = bloc.state.sports;
+
+      bloc.add(const FieldsSportSelected(SportType.tennis));
+      await pumpEventQueue();
+
+      expect(bloc.state.sports, before);
+      expect((bloc.state as FieldsLoaded).visible, hasLength(2));
+      await bloc.close();
+    });
+
+    test(
+      'novi sport na terenu dobija čip posle osvežavanja, bez izmene koda',
+      () async {
+        final bloc = await loaded();
+        expect(bloc.state.sports, isNot(contains(SportType.swimming)));
+
+        final created = await store.createField(
+          ownerId: const UserId(100),
+          name: 'Olimpijski Bazen',
+          description: 'Opis',
+          sport: SportType.swimming,
+          address: 'A 1',
+          city: 'Beograd',
+          pricePerHour: 1800,
+          contactPhone: '060',
+          confirmationMode: ConfirmationMode.manual,
+        );
+        await store.reviewField(
+          fieldId: created.id,
+          reviewerId: const UserId(1),
+          decision: ApprovalStatus.approved,
+        );
+
+        bloc.add(const FieldsRequested());
+        await bloc.stream.firstWhere((s) => s is FieldsLoaded);
+
+        expect(bloc.state.sports, contains(SportType.swimming));
+        await bloc.close();
+      },
+    );
+
+    test('izabran sport kog više nema se skida pri osvežavanju', () async {
+      store = FakeSportsFieldRepository(fields: [arena, tennis]);
+      source = _ControlledRepository(store);
+      final bloc = await loaded();
+      bloc.add(const FieldsSportSelected(SportType.tennis));
+      await pumpEventQueue();
+      expect((bloc.state as FieldsLoaded).visible, hasLength(1));
+
+      // Jedini teniski teren postaje padel teren.
+      await store.updateField(tennis.copyWith(sport: SportType.padel));
+      bloc.add(const FieldsRequested());
+      await bloc.stream.firstWhere((s) => s is FieldsLoaded);
+
+      expect(bloc.state.filters.sport, isNull);
+      expect((bloc.state as FieldsLoaded).visible, hasLength(2));
+      expect(bloc.state.sports, [SportType.football, SportType.padel]);
+      await bloc.close();
+    });
+
+    test(
+      'izabran sport koji i dalje postoji ostaje izabran pri osvežavanju',
+      () async {
+        final bloc = await loaded();
+        bloc.add(const FieldsSportSelected(SportType.padel));
+        await pumpEventQueue();
+
+        bloc.add(const FieldsRequested());
+        await bloc.stream.firstWhere((s) => s is FieldsLoaded);
+
+        expect(bloc.state.filters.sport, SportType.padel);
+        await bloc.close();
+      },
+    );
+
+    test('dok se učitava, u grešci i u praznom katalogu nema čipova', () async {
+      source.error = const ServerUnreachableException();
+      final failing = FieldsBloc(repository: source)
+        ..add(const FieldsRequested());
+      await failing.stream.firstWhere((s) => s is FieldsError);
+      expect(failing.state.sports, isEmpty);
+      await failing.close();
+
+      final empty = FieldsBloc(
+        repository: _ControlledRepository(FakeSportsFieldRepository()),
+      )..add(const FieldsRequested());
+      await empty.stream.firstWhere((s) => s is FieldsEmpty);
+      expect(empty.state.sports, isEmpty);
+      await empty.close();
+    });
+  });
+
   group('FieldDetailsBloc', () {
     test('Loading, pa Loaded', () async {
       final bloc = FieldDetailsBloc(repository: source)

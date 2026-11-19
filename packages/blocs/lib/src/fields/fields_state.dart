@@ -13,6 +13,10 @@ sealed class FieldsState extends Equatable {
   /// Svi učitani tereni, ili prazna lista dok nisu učitani.
   List<SportsField> get fields => const [];
 
+  /// Sportovi koji postoje u katalogu: iz njih se prave čipovi brzog filtera.
+  /// Ne zavise od izabranog sporta, pa čip ne nestaje kada se izabere.
+  List<SportType> get sports => const [];
+
   @override
   List<Object?> get props => [filters];
 }
@@ -48,9 +52,13 @@ final class FieldsLoaded extends FieldsState {
   /// prazna lista kada filteri ništa ne pronađu.
   final List<SportsField> visible;
 
+  @override
+  final List<SportType> sports;
+
   FieldsLoaded({required List<SportsField> fields, required super.filters})
     : fields = List.unmodifiable(fields),
-      visible = List.unmodifiable(applyFieldFilters(fields, filters));
+      visible = List.unmodifiable(applyFieldFilters(fields, filters)),
+      sports = List.unmodifiable(availableSports(fields));
 
   @override
   List<Object?> get props => [...super.props, fields];

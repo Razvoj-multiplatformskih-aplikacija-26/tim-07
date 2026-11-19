@@ -30,6 +30,9 @@ Tereni dolaze iz `SportsFieldRepository` (iza njega je lažni repozitorijum u me
   a ostaju i posle osvežavanja i povratka na ekran. Filteri koji ništa ne pronađu nisu prazan katalog.
 - `FieldDetailsBloc` učitava jedan teren po adresi `/fields/:fieldId` (`FieldLoader`): učitavanje, greška, „Teren nije pronađen.“ i teren.
   Teren koji nije javan (neodobren, neaktivan) se ne vidi ni preko adrese.
+- Brzi filter sportova (čipovi) se pravi od sportova koji postoje na terenima u katalogu (`FieldsState.sports`), ne iz fiksne liste:
+  novi sport na nekom terenu dobija čip posle osvežavanja, bez izmene koda, a sport bez javnog terena nema čip. Izabrani sport koji više
+  ne postoji se skida pri osvežavanju. Ikonica terena se bira po `SportType` (`sportIcon`), ne po tekstu.
 - Nazivi terena u rezervacijama dolaze iz kataloga (`context.fieldName`), a dok se katalog ne učita vidi se „Teren #id“.
 - Meni simulacije na katalogu izaziva grešku ili prazan odgovor sledećeg zahteva.
 
