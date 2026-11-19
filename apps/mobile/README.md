@@ -37,6 +37,10 @@ Tereni dolaze iz `SportsFieldRepository` (iza njega je lažni repozitorijum u me
   `calculateAvailability` iz domena računa termine iz radnog vremena terena, rezervacija svih korisnika i blokada, a isto pravilo će
   koristiti server. Stanja termina: slobodan, zauzet, blokiran i prošao; dan na koji teren ne radi je poseban prikaz. Posle povratka
   sa forme za rezervaciju termini se osvežavaju.
+- Forma za rezervaciju je `ReservationFormBloc`: provera termina uživo istim pravilima iz domena (`validateReservationSlot`) nad radnim
+  vremenom, blokadama i korisnikovim rezervacijama, cena, slanje i ishod. Stanja: učitavanje, unos, slanje, uspeh, odbijeno sa razlogom
+  i neuspelo (nema servera). Kada server odbije termin (npr. zauzet je u međuvremenu), korisnik vidi istu poruku kao da je pravilo
+  proverio klijent, unos ostaje, a podaci za proveru se ponovo učitavaju. Ekran samo šalje događaje i crta stanje.
 - Nazivi terena u rezervacijama dolaze iz kataloga (`context.fieldName`), a dok se katalog ne učita vidi se „Teren #id“.
 - Meni simulacije na katalogu izaziva grešku ili prazan odgovor sledećeg zahteva.
 

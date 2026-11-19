@@ -7,6 +7,7 @@ import 'package:mobile/data/mobile_availability_repository.dart';
 import 'package:mobile/data/mobile_demo_data.dart';
 import 'package:mobile/data/mobile_field_repository.dart';
 import 'package:mobile/data/mobile_repository.dart';
+import 'package:mobile/data/mobile_schedule_repository.dart';
 import 'package:mobile/main.dart';
 import 'package:mobile/navigation/app_router.dart';
 
@@ -45,6 +46,7 @@ void main() {
           delay: Duration.zero,
         ),
         fieldRepository: createMobileFieldRepository(delay: Duration.zero),
+        scheduleRepository: createMobileScheduleRepository(),
         authRepository: auth,
         initialLocation: location,
       ),

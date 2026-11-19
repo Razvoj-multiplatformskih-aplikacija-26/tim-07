@@ -9,6 +9,7 @@ import 'data/mobile_auth.dart';
 import 'data/mobile_availability_repository.dart';
 import 'data/mobile_field_repository.dart';
 import 'data/mobile_repository.dart';
+import 'data/mobile_schedule_repository.dart';
 import 'navigation/app_router.dart';
 import 'theme/app_theme.dart';
 
@@ -22,6 +23,7 @@ void main() {
         reservations: reservations,
       ),
       fieldRepository: createMobileFieldRepository(),
+      scheduleRepository: createMobileScheduleRepository(),
       authRepository: createMobileAuthRepository(),
     ),
   );
@@ -30,6 +32,7 @@ void main() {
 class MyApp extends StatefulWidget {
   final ReservationRepository repository;
   final SportsFieldRepository fieldRepository;
+  final FieldScheduleRepository scheduleRepository;
   final AvailabilityRepository availabilityRepository;
   final AuthRepository authRepository;
 
@@ -40,6 +43,7 @@ class MyApp extends StatefulWidget {
     super.key,
     required this.repository,
     required this.fieldRepository,
+    required this.scheduleRepository,
     required this.availabilityRepository,
     required this.authRepository,
     this.initialLocation = '/',
@@ -123,6 +127,9 @@ class _MyAppState extends State<MyApp> {
         ),
         RepositoryProvider<AvailabilityRepository>.value(
           value: widget.availabilityRepository,
+        ),
+        RepositoryProvider<FieldScheduleRepository>.value(
+          value: widget.scheduleRepository,
         ),
       ],
       child: MultiBlocProvider(

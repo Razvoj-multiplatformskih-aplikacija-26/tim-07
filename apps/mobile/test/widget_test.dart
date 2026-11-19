@@ -7,6 +7,7 @@ import 'package:mobile/data/mobile_demo_data.dart';
 import 'package:mobile/data/mobile_field_repository.dart';
 import 'package:mobile/data/mobile_fake_repository.dart';
 import 'package:mobile/data/mobile_repository.dart';
+import 'package:mobile/data/mobile_schedule_repository.dart';
 import 'package:mobile/main.dart';
 
 void main() {
@@ -34,6 +35,7 @@ void main() {
           delay: Duration.zero,
         ),
         fieldRepository: createMobileFieldRepository(delay: Duration.zero),
+        scheduleRepository: createMobileScheduleRepository(),
         authRepository: auth,
         initialLocation: location,
       ),
@@ -220,7 +222,7 @@ void main() {
 
     expect(find.text('Termin je van radnog vremena terena.'), findsNothing);
 
-    await tester.enterText(find.byType(TextFormField).at(1), '23:30');
+    await tester.enterText(find.byType(TextField).at(1), '23:30');
     await tester.pump();
 
     expect(find.text('Termin je van radnog vremena terena.'), findsOneWidget);
@@ -235,7 +237,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextFormField).first, 'abc');
+    await tester.enterText(find.byType(TextField).first, 'abc');
     await tester.pump();
 
     expect(

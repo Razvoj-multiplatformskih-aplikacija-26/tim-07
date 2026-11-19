@@ -9,6 +9,7 @@ import 'package:mobile/data/mobile_demo_data.dart';
 import 'package:mobile/data/mobile_fake_repository.dart';
 import 'package:mobile/data/mobile_field_repository.dart';
 import 'package:mobile/data/mobile_repository.dart';
+import 'package:mobile/data/mobile_schedule_repository.dart';
 import 'package:mobile/main.dart';
 import 'package:mobile/screens/field_details_screen.dart';
 import 'package:mobile/text/reservation_texts.dart';
@@ -44,6 +45,7 @@ void main() {
       MyApp(
         repository: reservations,
         fieldRepository: createMobileFieldRepository(delay: Duration.zero),
+        scheduleRepository: createMobileScheduleRepository(),
         availabilityRepository:
             availability?.call(reservations) ??
             createMobileAvailabilityRepository(
@@ -222,8 +224,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Nova rezervacija'), findsOneWidget);
-      expect(find.widgetWithText(TextFormField, '12:00'), findsOneWidget);
-      expect(find.widgetWithText(TextFormField, '13:00'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '12:00'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '13:00'), findsOneWidget);
     });
 
     testWidgets('zauzet termin se ne može otvoriti', (tester) async {
