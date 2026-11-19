@@ -240,16 +240,14 @@ void main() {
         timeout: const Duration(milliseconds: 50),
       );
 
-      final started = DateTime.now();
+      // Meri se trajanje čekanja, ne datum, pa je Stopwatch, a ne sat.
+      final waited = Stopwatch()..start();
       await expectLater(
         HttpFieldRepository(api).getFields(),
         throwsA(isA<ServerUnreachableException>()),
       );
 
-      expect(
-        DateTime.now().difference(started),
-        lessThan(const Duration(seconds: 1)),
-      );
+      expect(waited.elapsed, lessThan(const Duration(seconds: 1)));
     });
 
     test('HTML sa proxy-ja nije tehnički tekst za korisnika', () async {
@@ -335,6 +333,78 @@ void main() {
 
       await expired;
       expect(await store.read(), isNull);
+    });
+
+    test('nevažeći token se briše kao i istekao', () async {
+      final store = await signedIn();
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(401, errorBody('invalid_token')),
+        ),
+        session: store,
+      );
+      final expired = expectLater(api.expirations, emits(anything));
+
+      await expectLater(
+        HttpReservationRepository(api).getReservations(),
+        throwsA(isA<ServerRejectedException>()),
+      );
+
+      await expired;
+      expect(await store.read(), isNull);
+    });
+
+    test('403 je odbijena radnja, ne istek: prijava ostaje', () async {
+      final store = await signedIn();
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(403, errorBody('forbidden')),
+        ),
+        session: store,
+      );
+      var expirations = 0;
+      api.expirations.listen((_) => expirations++);
+
+      await expectLater(
+        HttpReservationRepository(api).cancelReservation(const ReservationId(7)),
+        throwsA(
+          isA<ServerRejectedException>().having(
+            (e) => describeError(e),
+            'message',
+            'Nemate pravo na ovu radnju.',
+          ),
+        ),
+      );
+
+      await Future<void>.delayed(Duration.zero);
+      expect(expirations, 0);
+      expect(await store.read(), 'token-of-ana');
+    });
+
+    test('401 bez poslatog tokena ne briše tuđu prijavu ni ne javlja istek', () async {
+      final store = MemorySessionStore();
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(401, errorBody('unauthenticated')),
+        ),
+        session: store,
+      );
+      var expirations = 0;
+      api.expirations.listen((_) => expirations++);
+
+      await expectLater(
+        HttpReservationRepository(api).getReservations(),
+        throwsA(
+          isA<ServerRejectedException>().having(
+            (e) => describeError(e),
+            'message',
+            'Prijavite se da biste nastavili.',
+          ),
+        ),
+      );
+
+      await Future<void>.delayed(Duration.zero);
+      expect(expirations, 0);
     });
 
     test('pogrešna lozinka nije istek prijave', () async {

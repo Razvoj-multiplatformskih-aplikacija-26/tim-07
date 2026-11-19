@@ -502,6 +502,100 @@ void main() {
     });
   });
 
+  group('telo zahteva: round-trip i neispravan oblik', () {
+    test('odluka o objavljivanju terena', () {
+      const request = FieldReviewRequestDto(decision: 'rejected', reason: 'Nema dozvole');
+
+      final back = FieldReviewRequestDto.fromJson(wire(request.toJson()));
+
+      expect((back.decision, back.reason), ('rejected', 'Nema dozvole'));
+      expect(
+        const FieldReviewRequestDto(decision: 'approved').toJson().keys,
+        isNot(contains('reason')),
+      );
+      expect(() => FieldReviewRequestDto.fromJson({}), throwsFormatException);
+    });
+
+    test('razlog za odbijanje ili otkazivanje rezervacije je neobavezan', () {
+      expect(
+        ReservationReasonRequestDto.fromJson(
+          wire(const ReservationReasonRequestDto(reason: 'Turnir').toJson()),
+        ).reason,
+        'Turnir',
+      );
+      expect(ReservationReasonRequestDto.fromJson({}).reason, isNull);
+      expect(const ReservationReasonRequestDto().toJson(), isEmpty);
+      expect(
+        () => ReservationReasonRequestDto.fromJson({'reason': 5}),
+        throwsFormatException,
+      );
+    });
+
+    test('zahtev za blokadu terena', () {
+      final request = CreateBlockedPeriodRequestDto(
+        startTime: DateTime.utc(2026, 11, 21, 8),
+        endTime: DateTime.utc(2026, 11, 21, 12),
+        reason: 'Održavanje',
+      );
+
+      final back = CreateBlockedPeriodRequestDto.fromJson(wire(request.toJson()));
+
+      expect(back.startTime, request.startTime);
+      expect(back.endTime, request.endTime);
+      expect(back.reason, 'Održavanje');
+      expect(
+        () => CreateBlockedPeriodRequestDto.fromJson({'startTime': 'sutra'}),
+        throwsFormatException,
+      );
+    });
+
+    test('termin i dostupnost se vraćaju iste, a trenutak bez zone se odbija', () {
+      final availability = AvailabilityDto(
+        fieldId: 3,
+        date: '2026-11-21',
+        slots: [
+          SlotDto(
+            startTime: DateTime.utc(2026, 11, 21, 8),
+            endTime: DateTime.utc(2026, 11, 21, 9),
+            state: SlotStateCodes.taken,
+          ),
+        ],
+      );
+
+      final back = AvailabilityDto.fromJson(wire(availability.toJson()));
+
+      expect(back.slots.single.state, SlotStateCodes.taken);
+      expect(back.slots.single.startTime, DateTime.utc(2026, 11, 21, 8));
+      expect(
+        () => SlotDto.fromJson({
+          'startTime': '2026-11-21T08:00:00',
+          'endTime': '2026-11-21T09:00:00Z',
+          'state': 'free',
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('radno vreme: sati i minuti ostaju, nevažeće vreme se odbija', () {
+      final schedule = ScheduleDto(
+        days: [
+          const ScheduleDayDto(
+            dayOfWeek: WeekDayCodes.monday,
+            opensAt: ClockTime(8, 30),
+            closesAt: ClockTime(22, 0),
+          ),
+        ],
+      );
+
+      final back = ScheduleDto.fromJson(wire(schedule.toJson()));
+
+      expect(back.days.single.opensAt, const ClockTime(8, 30));
+      expect(back.days.single.closesAt, const ClockTime(22, 0));
+      expect(() => ClockTime.parse('25:00'), throwsFormatException);
+      expect(() => ClockTime.parse('8:30'), throwsFormatException);
+    });
+  });
+
   group('blokade terena', () {
     test('blokada nosi identifikator koji server dodeli', () {
       final dto = BlockedPeriodDto.fromJson({
