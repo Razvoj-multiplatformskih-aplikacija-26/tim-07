@@ -248,7 +248,7 @@ final class TerenzoStore {
   Future<List<BlockedPeriod>> blockedPeriods(Iterable<FieldId> fieldIds, {DateTime? from, DateTime? to}) async {
     final rows = await _database.execute(
       Sql.named('''
-        SELECT field_id, start_time, end_time, reason FROM blocked_periods
+        SELECT id, field_id, start_time, end_time, reason FROM blocked_periods
         WHERE field_id = ANY(@ids)
           AND (@from::timestamptz IS NULL OR end_time > @from::timestamptz)
           AND (@to::timestamptz IS NULL OR start_time < @to::timestamptz)
@@ -263,11 +263,12 @@ final class TerenzoStore {
     return [for (final row in rows) _blocked(row.toColumnMap())];
   }
 
-  Future<void> insertBlockedPeriod(BlockedPeriod period) async {
-    await _database.execute(
-      Sql.named(
-        'INSERT INTO blocked_periods (field_id, start_time, end_time, reason) VALUES (@field, @start, @end, @reason)',
-      ),
+  Future<BlockedPeriod> insertBlockedPeriod(BlockedPeriod period) async {
+    final rows = await _database.execute(
+      Sql.named('''
+        INSERT INTO blocked_periods (field_id, start_time, end_time, reason) VALUES (@field, @start, @end, @reason)
+        RETURNING id, field_id, start_time, end_time, reason
+      '''),
       parameters: {
         'field': period.fieldId.value,
         'start': period.startTime.toUtc(),
@@ -275,6 +276,15 @@ final class TerenzoStore {
         'reason': period.reason,
       },
     );
+    return _blocked(rows.single.toColumnMap());
+  }
+
+  Future<bool> deleteBlockedPeriod(FieldId fieldId, BlockedPeriodId id) async {
+    final result = await _database.execute(
+      Sql.named('DELETE FROM blocked_periods WHERE id = @id AND field_id = @field'),
+      parameters: {'id': id.value, 'field': fieldId.value},
+    );
+    return result.affectedRows == 1;
   }
 
   Future<List<Reservation>> reservations({UserId? userId, FieldId? fieldId}) => _reservations(
@@ -420,6 +430,7 @@ FieldSchedule _schedule(Map<String, Object?> row) => FieldSchedule(
 );
 
 BlockedPeriod _blocked(Map<String, Object?> row) => BlockedPeriod(
+  id: BlockedPeriodId(row['id']! as int),
   fieldId: FieldId(row['field_id']! as int),
   startTime: row['start_time']! as DateTime,
   endTime: row['end_time']! as DateTime,

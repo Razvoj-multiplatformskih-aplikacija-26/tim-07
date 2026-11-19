@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/field_details_screen.dart';
@@ -77,7 +78,13 @@ class AppRouter {
                       return FieldLoader(
                         fieldId: id,
                         title: 'Detalji terena',
-                        builder: (field) => FieldDetailsScreen(field: field),
+                        builder: (field) => BlocProvider(
+                          create: (context) => AvailabilityBloc(
+                            repository: context.read<AvailabilityRepository>(),
+                            fieldId: field.id,
+                          )..add(const AvailabilityRequested()),
+                          child: FieldDetailsScreen(field: field),
+                        ),
                       );
                     },
                     routes: [

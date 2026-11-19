@@ -312,4 +312,32 @@ void main() {
       expect(hoursLabel(111), '111 sati');
     });
   });
+
+  group('blokade terena', () {
+    test('poruka za svako pravilo je ista kao u domenu', () {
+      for (final error in const <BlockedPeriodError>[
+        InvalidBlockRange(),
+        BlockInPast(),
+        BlockOverlapsConfirmedReservation(),
+      ]) {
+        final server = errorMessage(fromServer(error.toErrorDto()));
+
+        expect(server, error.message);
+        expect(describeError(BlockedPeriodRuleViolation(error)), error.message);
+        expect(
+          describeError(
+            ServerRejectedException(fromServer(error.toErrorDto())),
+          ),
+          error.message,
+        );
+      }
+    });
+
+    test('preklapanje sa rezervacijom kaže razlog', () {
+      expect(
+        errorMessage(const ErrorDto(code: ErrorCodes.blockOverlapsReservation)),
+        'U izabranom periodu već postoji potvrđena rezervacija.',
+      );
+    });
+  });
 }

@@ -69,3 +69,17 @@ String formatPrice(int amount) {
 
   return '$buffer din';
 }
+
+String formatDateTime(DateTime time) =>
+    '${formatDate(time)} ${formatClock(time)}';
+
+/// „20.11.2026. 10:00 - 12:00“ za isti dan, inače oba datuma.
+String formatDateTimeRange(DateTime start, DateTime end) {
+  final sameDay = start.year == end.year &&
+      start.month == end.month &&
+      start.day == end.day;
+
+  return sameDay
+      ? '${formatDate(start)} ${formatTimeRange(start, end)}'
+      : '${formatDateTime(start)} - ${formatDateTime(end)}';
+}

@@ -25,7 +25,12 @@ abstract final class ErrorCodes {
   static const invalidStatusTransition = 'invalid_status_transition';
   static const invalidApprovalTransition = 'invalid_approval_transition';
 
+  // 409 (blokada terena preko potvrđene rezervacije)
+  static const blockOverlapsReservation = 'block_overlaps_reservation';
+
   // 422 (pravila iz domena)
+  static const invalidBlockRange = 'invalid_block_range';
+  static const blockInPast = 'block_in_past';
   static const invalidTimeRange = 'invalid_time_range';
   static const reservationInPast = 'reservation_in_past';
   static const outsideWorkingHours = 'outside_working_hours';
@@ -51,6 +56,9 @@ abstract final class ErrorCodes {
     slotTaken,
     invalidStatusTransition,
     invalidApprovalTransition,
+    blockOverlapsReservation,
+    invalidBlockRange,
+    blockInPast,
     invalidTimeRange,
     reservationInPast,
     outsideWorkingHours,
@@ -77,7 +85,10 @@ int httpStatusFor(String code) => switch (code) {
   ErrorCodes.notFound => 404,
   ErrorCodes.slotTaken ||
   ErrorCodes.invalidStatusTransition ||
-  ErrorCodes.invalidApprovalTransition => 409,
+  ErrorCodes.invalidApprovalTransition ||
+  ErrorCodes.blockOverlapsReservation => 409,
+  ErrorCodes.invalidBlockRange ||
+  ErrorCodes.blockInPast ||
   ErrorCodes.invalidTimeRange ||
   ErrorCodes.reservationInPast ||
   ErrorCodes.outsideWorkingHours ||

@@ -1071,4 +1071,235 @@ void main() {
       throwsA(isA<ServerUnreachableException>()),
     );
   });
+
+  group('HttpAvailabilityRepository', () {
+    Map<String, Object?> slot(int hour, String state) => {
+      'startTime': DateTime.utc(2026, 11, 20, hour).toIso8601String(),
+      'endTime': DateTime.utc(2026, 11, 20, hour + 1).toIso8601String(),
+      'state': state,
+    };
+
+    test('traži dan terena bez prijave i vraća termine sa stanjem', () async {
+      late http.BaseRequest seen;
+      final api = clientFor(
+        MockClient((request) async {
+          seen = request;
+          return jsonResponse(200, {
+            'fieldId': 3,
+            'date': '2026-11-20',
+            'slots': [slot(8, 'free'), slot(9, 'taken'), slot(10, 'blocked')],
+          });
+        }),
+      );
+
+      final slots = await HttpAvailabilityRepository(api).getAvailability(
+        fieldId: const FieldId(3),
+        date: DateTime(2026, 11, 20, 15, 30),
+      );
+
+      expect(seen.url.path, '/fields/3/availability');
+      expect(seen.url.queryParameters['date'], '2026-11-20');
+      expect(seen.headers.containsKey('authorization'), isFalse);
+      expect(slots.map((s) => s.state), [
+        SlotState.free,
+        SlotState.taken,
+        SlotState.blocked,
+      ]);
+      expect(slots.first.duration, const Duration(hours: 1));
+    });
+
+    test('termini se vraćaju u lokalnom vremenu', () async {
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(200, {
+            'fieldId': 3,
+            'date': '2026-11-20',
+            'slots': [slot(8, 'free')],
+          }),
+        ),
+      );
+
+      final slots = await HttpAvailabilityRepository(api).getAvailability(
+        fieldId: const FieldId(3),
+        date: DateTime(2026, 11, 20),
+      );
+
+      expect(slots.single.startTime.isUtc, isFalse);
+      expect(slots.single.startTime, DateTime.utc(2026, 11, 20, 8).toLocal());
+    });
+
+    test('dan kada teren ne radi je prazna lista', () async {
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(200, {
+            'fieldId': 3,
+            'date': '2026-11-22',
+            'slots': <Object?>[],
+          }),
+        ),
+      );
+
+      expect(
+        await HttpAvailabilityRepository(api).getAvailability(
+          fieldId: const FieldId(3),
+          date: DateTime(2026, 11, 22),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('nepoznato stanje termina je greška servera, ne pad', () async {
+      final api = clientFor(
+        MockClient(
+          (request) async => jsonResponse(200, {
+            'fieldId': 3,
+            'date': '2026-11-20',
+            'slots': [slot(8, 'maintenance')],
+          }),
+        ),
+      );
+
+      await expectLater(
+        HttpAvailabilityRepository(api).getAvailability(
+          fieldId: const FieldId(3),
+          date: DateTime(2026, 11, 20),
+        ),
+        throwsA(
+          isA<ServerRejectedException>().having(
+            (e) => e.error.code,
+            'code',
+            ErrorCodes.internal,
+          ),
+        ),
+      );
+    });
+
+    test('nepostojeći teren i nema mreže stižu kao izuzeci', () async {
+      final notFound = clientFor(
+        MockClient(
+          (request) async => jsonResponse(404, errorBody('not_found')),
+        ),
+      );
+      final offline = clientFor(
+        MockClient(
+          (request) async =>
+              throw http.ClientException('Connection refused', request.url),
+        ),
+      );
+
+      await expectLater(
+        HttpAvailabilityRepository(notFound).getAvailability(
+          fieldId: const FieldId(99),
+          date: DateTime(2026, 11, 20),
+        ),
+        throwsA(isA<ServerRejectedException>()),
+      );
+      await expectLater(
+        HttpAvailabilityRepository(offline).getAvailability(
+          fieldId: const FieldId(3),
+          date: DateTime(2026, 11, 20),
+        ),
+        throwsA(isA<ServerUnreachableException>()),
+      );
+    });
+  });
+
+  group('blokade terena preko HTTP-a', () {
+    Map<String, Object?> blockJson({int id = 5}) => {
+      'id': id,
+      'fieldId': 3,
+      'startTime': '2026-11-21T08:00:00.000Z',
+      'endTime': '2026-11-21T12:00:00.000Z',
+      'reason': 'Održavanje',
+    };
+
+    test('nova blokada se šalje bez identifikatora, a vraća sa njim', () async {
+      late http.Request seen;
+      final api = clientFor(
+        MockClient((request) async {
+          seen = request;
+          return jsonResponse(201, blockJson());
+        }),
+        session: await signedIn(),
+      );
+
+      final saved = await HttpScheduleRepository(api).addBlockedPeriod(
+        BlockedPeriod(
+          fieldId: const FieldId(3),
+          startTime: DateTime.utc(2026, 11, 21, 8),
+          endTime: DateTime.utc(2026, 11, 21, 12),
+          reason: 'Održavanje',
+        ),
+      );
+
+      expect(seen.method, 'POST');
+      expect(seen.url.path, '/fields/3/blocked-periods');
+      expect((jsonDecode(seen.body) as Map).containsKey('id'), isFalse);
+      expect(saved.id, const BlockedPeriodId(5));
+    });
+
+    test('blokada se briše na adresi svog terena', () async {
+      late http.Request seen;
+      final api = clientFor(
+        MockClient((request) async {
+          seen = request;
+          return http.Response('', 204);
+        }),
+        session: await signedIn(),
+      );
+
+      await HttpScheduleRepository(api)
+          .removeBlockedPeriod(const FieldId(3), const BlockedPeriodId(5));
+
+      expect(seen.method, 'DELETE');
+      expect(seen.url.path, '/fields/3/blocked-periods/5');
+      expect(seen.headers['authorization'], 'Bearer token-of-ana');
+    });
+
+    test('blokada preko potvrđene rezervacije stiže kao razlog, istom porukom kao u domenu', () async {
+      final api = clientFor(
+        MockClient(
+          (request) async =>
+              jsonResponse(409, errorBody('block_overlaps_reservation')),
+        ),
+        session: await signedIn(),
+      );
+
+      Object? caught;
+      try {
+        await HttpScheduleRepository(api).addBlockedPeriod(
+          BlockedPeriod(
+            fieldId: const FieldId(3),
+            startTime: DateTime.utc(2026, 11, 21, 8),
+            endTime: DateTime.utc(2026, 11, 21, 12),
+          ),
+        );
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(
+        describeError(caught!),
+        const BlockOverlapsConfirmedReservation().message,
+      );
+    });
+
+    test(
+      'tuđa ili nepostojeća blokada: greška servera, ne tihi uspeh',
+      () async {
+        final api = clientFor(
+          MockClient(
+            (request) async => jsonResponse(404, errorBody('not_found')),
+          ),
+          session: await signedIn(),
+        );
+
+        await expectLater(
+          HttpScheduleRepository(api)
+              .removeBlockedPeriod(const FieldId(3), const BlockedPeriodId(99)),
+          throwsA(isA<ServerRejectedException>()),
+        );
+      },
+    );
+  });
 }

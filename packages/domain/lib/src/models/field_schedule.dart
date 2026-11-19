@@ -48,6 +48,9 @@ final class FieldSchedule {
 ///
 /// Primer: održavanje terena ili privatni događaj.
 final class BlockedPeriod {
+  /// `null` dok blokada nije sačuvana; server je dodeljuje pri upisu.
+  final BlockedPeriodId? id;
+
   final FieldId fieldId;
   final DateTime startTime;
   final DateTime endTime;
@@ -56,6 +59,7 @@ final class BlockedPeriod {
   final String? reason;
 
   const BlockedPeriod({
+    this.id,
     required this.fieldId,
     required this.startTime,
     required this.endTime,

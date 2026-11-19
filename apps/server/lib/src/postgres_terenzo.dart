@@ -9,7 +9,8 @@ final class PostgresTerenzo
         SportsFieldRepository,
         FieldScheduleRepository,
         UserRepository,
-        StatisticsRepository {
+        StatisticsRepository,
+        AvailabilityRepository {
   PostgresTerenzo(this._database, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
 
   final Pool<void> _database;
@@ -67,7 +68,7 @@ final class PostgresTerenzo
       return await _database.runTx((tx) async {
         final store = TerenzoStore(tx);
         await refreshStatuses(tx);
-        final field = await store.field(fieldId) ?? (throw EntityNotFound('field', fieldId.value));
+        final field = await store.fieldForUpdate(fieldId) ?? (throw EntityNotFound('field', fieldId.value));
         if (await store.user(userId) == null) throw EntityNotFound('user', userId.value);
         if (!isFieldPublic(field)) throw const ReservationRuleViolation(FieldUnavailable());
 
@@ -270,28 +271,45 @@ final class PostgresTerenzo
       _store.blockedPeriods([fieldId], from: from, to: to);
 
   @override
-  Future<BlockedPeriod> addBlockedPeriod(BlockedPeriod period) async {
-    if (!period.endTime.isAfter(period.startTime)) throw const ReservationRuleViolation(InvalidTimeRange());
-    if (await _store.field(period.fieldId) == null) throw EntityNotFound('field', period.fieldId.value);
-    await _store.insertBlockedPeriod(period);
-    return BlockedPeriod(
-      fieldId: period.fieldId,
-      startTime: period.startTime.toUtc(),
-      endTime: period.endTime.toUtc(),
-      reason: period.reason,
+  Future<BlockedPeriod> addBlockedPeriod(BlockedPeriod period) => _database.runTx((tx) async {
+    final store = TerenzoStore(tx);
+    if (await store.fieldForUpdate(period.fieldId) == null) throw EntityNotFound('field', period.fieldId.value);
+    final at = now();
+    final overlapping = await store.reservationsOverlapping(
+      [period.fieldId],
+      from: period.startTime.isBefore(period.endTime) ? period.startTime : period.endTime,
+      to: period.startTime.isBefore(period.endTime) ? period.endTime : period.startTime,
     );
+    final error = validateBlockedPeriod(
+      fieldId: period.fieldId,
+      startTime: period.startTime,
+      endTime: period.endTime,
+      now: at,
+      reservations: [
+        for (final reservation in overlapping)
+          reservation.copyWith(status: resolveReservationStatus(reservation, at)),
+      ],
+    );
+    if (error != null) throw BlockedPeriodRuleViolation(error);
+    return store.insertBlockedPeriod(period);
+  });
+
+  @override
+  Future<void> removeBlockedPeriod(FieldId fieldId, BlockedPeriodId id) async {
+    if (!await _store.deleteBlockedPeriod(fieldId, id)) throw EntityNotFound('blocked period', id.value);
   }
 
-  Future<List<SlotAvailability>> availability(FieldId fieldId, DateTime localDay) async {
+  @override
+  Future<List<AvailabilitySlot>> getAvailability({required FieldId fieldId, required DateTime date}) async {
     await refreshStatuses();
-    final from = DateTime(localDay.year, localDay.month, localDay.day);
-    final to = DateTime(localDay.year, localDay.month, localDay.day + 1);
-    return availableSlots(
+    final day = DateTime(date.year, date.month, date.day);
+    final next = DateTime(date.year, date.month, date.day + 1);
+    return calculateAvailability(
       fieldId: fieldId,
-      localDay: from,
+      date: day,
       schedules: await _store.schedules([fieldId]),
-      reservations: await _store.reservationsOverlapping([fieldId], from: from, to: to),
-      blockedPeriods: await _store.blockedPeriods([fieldId], from: from, to: to),
+      reservations: await _store.reservationsOverlapping([fieldId], from: day, to: next),
+      blockedPeriods: await _store.blockedPeriods([fieldId], from: day, to: next),
       now: now().toLocal(),
     );
   }

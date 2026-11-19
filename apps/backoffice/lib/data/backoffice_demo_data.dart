@@ -45,11 +45,63 @@ abstract final class BackofficeDemoData {
     ),
   ];
 
-  static List<SportsField> get fields => DemoData.fields;
+  /// Vlasnik kao koga radi demo backoffice dok nema prijave (T51). Prava su
+  /// njegova: vidi i blokira samo svoje terene.
+  static final owner = AppUser(
+    id: const UserId(10),
+    firstName: 'Petar',
+    lastName: 'Vlasnik',
+    email: 'petar.vlasnik@example.com',
+    phoneNumber: '0645555555',
+    dateOfBirth: DateTime(1985, 6, 1),
+    role: UserRole.owner,
+    createdAt: DateTime(2025, 1, 10),
+  );
+
+  /// Demo tereni, svi u vlasništvu demo vlasnika.
+  static List<SportsField> get fields => [
+        for (final field in DemoData.fields)
+          SportsField(
+            id: field.id,
+            ownerId: owner.id,
+            name: field.name,
+            description: field.description,
+            sport: field.sport,
+            address: field.address,
+            city: field.city,
+            pricePerHour: field.pricePerHour,
+            contactPhone: field.contactPhone,
+            imageUrls: field.imageUrls,
+            confirmationMode: field.confirmationMode,
+            isActive: field.isActive,
+            approvalStatus: field.approvalStatus,
+          ),
+      ];
 
   static List<FieldSchedule> get schedules => DemoData.schedules;
 
-  static List<BlockedPeriod> get blockedPeriods => DemoData.blockedPeriods;
+  /// Demo blokade u narednim danima, u odnosu na dan kada se aplikacija pokrene.
+  static List<BlockedPeriod> createBlockedPeriods({DateTime? now}) {
+    final current = now ?? DateTime.now();
+    final today = DateTime(current.year, current.month, current.day);
+
+    return [
+      BlockedPeriod(
+        fieldId: const FieldId(1),
+        startTime: today.add(const Duration(days: 3, hours: 8)),
+        endTime: today.add(const Duration(days: 3, hours: 12)),
+        reason: 'Održavanje terena',
+      ),
+      BlockedPeriod(
+        fieldId: const FieldId(2),
+        startTime: today.add(const Duration(days: 5, hours: 18)),
+        endTime: today.add(const Duration(days: 5, hours: 22)),
+        reason: 'Turnir',
+      ),
+    ];
+  }
+
+  static List<BlockedPeriod> get blockedPeriods => createBlockedPeriods();
 
   static List<Reservation> createReservations({DateTime? now}) {
     final current = now ?? DateTime.now();
