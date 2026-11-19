@@ -6,15 +6,21 @@ import 'package:go_router/go_router.dart';
 import 'package:messages/messages.dart';
 
 import 'data/mobile_auth.dart';
+import 'data/mobile_availability_repository.dart';
 import 'data/mobile_field_repository.dart';
 import 'data/mobile_repository.dart';
 import 'navigation/app_router.dart';
 import 'theme/app_theme.dart';
 
 void main() {
+  final reservations = createMobileRepository();
+
   runApp(
     MyApp(
-      repository: createMobileRepository(),
+      repository: reservations,
+      availabilityRepository: createMobileAvailabilityRepository(
+        reservations: reservations,
+      ),
       fieldRepository: createMobileFieldRepository(),
       authRepository: createMobileAuthRepository(),
     ),
@@ -24,6 +30,7 @@ void main() {
 class MyApp extends StatefulWidget {
   final ReservationRepository repository;
   final SportsFieldRepository fieldRepository;
+  final AvailabilityRepository availabilityRepository;
   final AuthRepository authRepository;
 
   /// Adresa na kojoj aplikacija počinje (za testove i duboke linkove).
@@ -33,6 +40,7 @@ class MyApp extends StatefulWidget {
     super.key,
     required this.repository,
     required this.fieldRepository,
+    required this.availabilityRepository,
     required this.authRepository,
     this.initialLocation = '/',
   });
@@ -112,6 +120,9 @@ class _MyAppState extends State<MyApp> {
         ),
         RepositoryProvider<SportsFieldRepository>.value(
           value: widget.fieldRepository,
+        ),
+        RepositoryProvider<AvailabilityRepository>.value(
+          value: widget.availabilityRepository,
         ),
       ],
       child: MultiBlocProvider(

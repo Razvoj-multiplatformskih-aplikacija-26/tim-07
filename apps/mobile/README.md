@@ -33,6 +33,10 @@ Tereni dolaze iz `SportsFieldRepository` (iza njega je lažni repozitorijum u me
 - Brzi filter sportova (čipovi) se pravi od sportova koji postoje na terenima u katalogu (`FieldsState.sports`), ne iz fiksne liste:
   novi sport na nekom terenu dobija čip posle osvežavanja, bez izmene koda, a sport bez javnog terena nema čip. Izabrani sport koji više
   ne postoji se skida pri osvežavanju. Ikonica terena se bira po `SportType` (`sportIcon`), ne po tekstu.
+- Slobodni termini na detalju terena dolaze iz `AvailabilityBloc` (`AvailabilityRepository`), ne iz liste sati u ekranu: pravilo
+  `calculateAvailability` iz domena računa termine iz radnog vremena terena, rezervacija svih korisnika i blokada, a isto pravilo će
+  koristiti server. Stanja termina: slobodan, zauzet, blokiran i prošao; dan na koji teren ne radi je poseban prikaz. Posle povratka
+  sa forme za rezervaciju termini se osvežavaju.
 - Nazivi terena u rezervacijama dolaze iz kataloga (`context.fieldName`), a dok se katalog ne učita vidi se „Teren #id“.
 - Meni simulacije na katalogu izaziva grešku ili prazan odgovor sledećeg zahteva.
 

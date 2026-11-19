@@ -13,6 +13,10 @@ class MobileFakeReservationRepository implements ReservationRepository {
     this.delay = const Duration(milliseconds: 600),
   });
 
+  /// Rezervacije svih korisnika, bez kašnjenja i simulacije. Iz njih se
+  /// računaju slobodni termini.
+  FakeReservationRepository get store => _store;
+
   bool get failsNextRequest => _failNext;
 
   bool get returnsEmptyOnNextRequest => _emptyNext;

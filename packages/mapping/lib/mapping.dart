@@ -3,6 +3,7 @@
 // Isti kod koriste server (domen -> DTO, DTO -> domen) i klijenti (obrnuto).
 // Zavisi od `domain` i `contract`; nijedan od njih ne zavisi od ovog paketa.
 
+export 'src/availability_mapping.dart';
 export 'src/codes_mapping.dart';
 export 'src/error_mapping.dart';
 export 'src/field_mapping.dart';
