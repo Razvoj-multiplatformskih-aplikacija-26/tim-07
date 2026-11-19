@@ -23,7 +23,7 @@ class SimulationMenu extends StatelessWidget {
         repository.returnEmptyOnNextRequest();
         _inform(context, 'Sledeće učitavanje će vratiti praznu listu.');
       case _SimulationAction.reload:
-        context.read<ReservationBloc>().add(const ReservationsRequested());
+        context.read<ReservationListBloc>().add(const ReservationListRefreshed());
     }
   }
 

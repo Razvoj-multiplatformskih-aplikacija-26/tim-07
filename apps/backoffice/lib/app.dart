@@ -11,6 +11,10 @@ import 'theme/backoffice_theme.dart';
 
 class BackofficeApp extends StatefulWidget {
   final ReservationRepository repository;
+
+  /// Izvor tabele rezervacija (filteri, pretraga, strane). Kada nije dat,
+  /// koristi se [repository], koji ga mora implementirati.
+  final ReservationSearchRepository? searchRepository;
   final SportsFieldRepository fieldRepository;
   final FieldScheduleRepository scheduleRepository;
   final AuthRepository? authRepository;
@@ -20,12 +24,17 @@ class BackofficeApp extends StatefulWidget {
   const BackofficeApp({
     super.key,
     required this.repository,
+    this.searchRepository,
     required this.fieldRepository,
     required this.scheduleRepository,
     this.authRepository,
     this.statisticsRepository,
     this.owner,
-  }) : assert(authRepository != null || owner != null);
+  }) : assert(authRepository != null || owner != null),
+       assert(
+         searchRepository != null || repository is ReservationSearchRepository,
+         'Tabela rezervacija traži ReservationSearchRepository.',
+       );
 
   @override
   State<BackofficeApp> createState() => _BackofficeAppState();
@@ -33,6 +42,12 @@ class BackofficeApp extends StatefulWidget {
 
 class _BackofficeAppState extends State<BackofficeApp> {
   late final ReservationBloc _reservations = ReservationBloc(repository: widget.repository);
+  // Tabela rezervacija: filteri, pretraga i strane. `ReservationBloc` ostaje za
+  // akcije nad jednom rezervacijom (potvrda, otkazivanje).
+  late final ReservationListBloc _list = ReservationListBloc(
+    reservations:
+        widget.searchRepository ?? widget.repository as ReservationSearchRepository,
+  );
   late final ReservationSelectionBloc _selection = ReservationSelectionBloc();
   late final DirectoryCubit _directory = DirectoryCubit(
     fieldRepository: widget.fieldRepository,
@@ -48,7 +63,7 @@ class _BackofficeAppState extends State<BackofficeApp> {
     super.initState();
     if (_auth == null) {
       _directory.load();
-      _reservations.add(const ReservationsRequested());
+      _list.add(const ReservationListStarted());
     }
   }
 
@@ -58,16 +73,18 @@ class _BackofficeAppState extends State<BackofficeApp> {
     _directory.close();
     _selection.close();
     _reservations.close();
+    _list.close();
     super.dispose();
   }
 
   void _onAuthChanged(BuildContext context, AuthState state) {
     if (state is AuthAuthenticated) {
       _directory.load();
-      _reservations.add(const ReservationsRequested());
+      _list.add(const ReservationListStarted());
     } else if (state is AuthUnauthenticated) {
       _directory.clear();
       _reservations.add(const ReservationsCleared());
+      _list.add(const ReservationListCleared());
     }
   }
 
@@ -134,6 +151,7 @@ class _BackofficeAppState extends State<BackofficeApp> {
       child: MultiBlocProvider(
         providers: [
           BlocProvider.value(value: _reservations),
+          BlocProvider.value(value: _list),
           BlocProvider.value(value: _selection),
           BlocProvider.value(value: _directory),
           if (auth != null) BlocProvider.value(value: auth),

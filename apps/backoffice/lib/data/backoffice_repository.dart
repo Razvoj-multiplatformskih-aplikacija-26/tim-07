@@ -15,6 +15,7 @@ BackofficeFakeReservationRepository createBackofficeRepository({
     fields: BackofficeDemoData.fields,
     schedules: BackofficeDemoData.schedules,
     blockedPeriods: BackofficeDemoData.blockedPeriods,
+    users: BackofficeDemoData.users,
     clock: clock,
   );
 

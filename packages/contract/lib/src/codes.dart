@@ -67,3 +67,17 @@ abstract final class StatsPeriodCodes {
   static const week = 'week';
   static const month = 'month';
 }
+
+/// Kolone po kojima se sortira lista rezervacija (`?sort=`).
+abstract final class ReservationSortCodes {
+  static const id = 'id';
+  static const field = 'field';
+  static const user = 'user';
+  static const start = 'start';
+  static const status = 'status';
+}
+
+abstract final class SortOrderCodes {
+  static const ascending = 'asc';
+  static const descending = 'desc';
+}

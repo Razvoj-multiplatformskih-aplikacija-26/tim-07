@@ -293,9 +293,25 @@ Vlasnik vidi dan ili nedelju svojih terena, termin po termin.
 
 **Odluka.** Bloc postoji tamo gde stanje dolazi sa servera ili ga deli više ekrana; sve ostalo je stanje widgeta.
 
-- **Deljeni Bloc-ovi u `packages/blocs`, po oblastima** (`auth`, `reservations`, `fields`, `field_management`, `field_review`, `blocked_periods`, `calendar`, `statistics`, …). Svaki radi samo preko portova iz domena, pa ga isto koriste mobilna aplikacija, backoffice i testovi sa lažnim repozitorijumima. `AuthBloc` i `ReservationBloc` koriste oba klijenta.
+- **Deljeni Bloc-ovi u `packages/blocs`, po oblastima** (`auth`, `reservations`, `reservation_list`, `fields`, `field_management`, `field_review`, `blocked_periods`, `calendar`, `statistics`, …). Svaki radi samo preko portova iz domena, pa ga isto koriste mobilna aplikacija, backoffice i testovi sa lažnim repozitorijumima. `AuthBloc` i `ReservationBloc` koriste oba klijenta.
 - **U backoffice-u ostaju samo dva lokalna:** `ReservationSelectionBloc` (koja je rezervacija izabrana, deli ga tabela, lista, panel i tastatura) i `DirectoryCubit` (imena terena za tabelu, učitana sa servera posle prijave). Ne trebaju mobilnoj aplikaciji, pa nisu u zajedničkom paketu.
 - **Bez Bloc-a:** izabrana sekcija u navigaciji, otvoren dijalog, polja forme pre slanja i radno vreme pre čuvanja. To je stanje jednog widgeta; Bloc dobija tek gotov zahtev (`FieldSaveRequested`, `FieldScheduleSaveRequested`, `FieldReviewDecided`).
 - Nijedan widget ne čita `BackofficeDemoData`; demo podaci su samo izvor za lažne repozitorijume u testovima i demo režimu.
 
 **Odbačeno.** *Bloc za svaku stranicu i svaki dijalog.* Više koda bez koristi: stanje koje vidi samo jedan widget ne treba da prolazi kroz događaje i stanja, a teže se prati na odbrani.
+
+## 19. Tabela rezervacija: filteri, pretraga, sortiranje i strane
+
+Vlasnik filtrira rezervacije po terenu, stanju i datumu, traži po korisniku, sortira po koloni i lista po stranama. Sve to radi izvor podataka; tabela traži samo stranu koju prikazuje.
+
+- **Jedan upit, jedno pravilo.** `ReservationQuery` (domen) nosi filtere, pretragu, sortiranje i stranu, a `searchReservations` (domen) ga primenjuje: filteri se spajaju sa „i“, datumi se odnose na dan početka rezervacije (oba kraja uključena), pretraga traži svaku reč u imenu ili email-u korisnika bez razlike u slovima i dijakriticima (`petrovic` nalazi „Petrović“), a sortiranje je stabilno (pri jednakim vrednostima ide po `id`, pa se rezervacija ne pojavi na dve strane). Pravilo koriste server (`GET /reservations`) i lažni izvor u klijentu, pa daju iste strane za iste podatke.
+- **Mreža:** `GET /reservations?fieldId=&status=&from=yyyy-MM-dd&to=yyyy-MM-dd&search=&sort=&order=&limit=&offset=`. `sort` je jedan od `id`, `field`, `user`, `start`, `status`, a `order` je `asc` ili `desc`. Nepoznata vrednost je 400. Odgovor je strana iz odluke 6 sa ukupnim brojem.
+- **Port:** `ReservationSearchRepository` (domen), odvojen od `ReservationRepository`, da postojeće implementacije i testovi ostanu isti. `HttpReservationRepository` i `FakeReservationRepository` implementiraju oba.
+- **`ReservationListBloc`** drži upit u svakom stanju (Loading, Loaded, Empty, NoMatches, Error), pa greška ili učitavanje ne brišu izabrane filtere. Razlikuje „nema nijedne rezervacije“ (Empty) od „filteri ništa ne nalaze“ (NoMatches): drugo nije greška i nudi „Poništi filtere“. Pretraga čeka da vlasnik prestane da kuca (300 ms), a odgovor starijeg zahteva se odbacuje. Svaka promena filtera, pretrage ili sortiranja vraća na prvu stranu. Ako strana nestane posle osvežavanja (poslednja rezervacija sa nje je otkazana), prikazuje se poslednja koja postoji.
+- **Izbor:** `ReservationSelectionBloc` ostaje lokalni. Izabrana rezervacija ostaje izabrana dok je na strani koja se prikazuje, a kada je filter, pretraga ili strana izbace, izbor se briše. Dok se nova strana učitava, izbor se ne dira.
+- **`ReservationBloc` ostaje za akcije** (potvrda, otkazivanje). Kada akcija završi, tabela se osvežava, jer stanje rezervacije možda više ne odgovara filteru.
+- **Tastatura:** strelice, Home i End kreću se po redovima trenutne strane, a PgUp i PgDn menjaju stranu. Jednoslovne prečice (P, O, R) ne važe dok je fokus u polju pretrage.
+
+**Odbačeno.**
+- *Filtriranje u klijentu nad celom listom.* Radi dok ima malo podataka, ali tabela bi učitavala sve rezervacije svih terena, a odluka 6 traži strane sa servera.
+- *Kursor umesto `offset`.* Vidi odluku 6.

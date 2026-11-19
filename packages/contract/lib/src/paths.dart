@@ -63,6 +63,11 @@ abstract final class ApiQuery {
   static const period = 'period';
   static const day = 'day';
   static const role = 'role';
+
+  /// Sortiranje liste rezervacija: `sort` je jedan od `ReservationSortCodes`, a
+  /// `order` jedan od `SortOrderCodes`.
+  static const sort = 'sort';
+  static const order = 'order';
 }
 
 /// Straničenje (odluka 6): podrazumevano 20, najviše 100.

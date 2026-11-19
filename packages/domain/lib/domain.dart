@@ -33,6 +33,8 @@ export 'src/rules/field_details_validation.dart';
 export 'src/rules/availability.dart';
 export 'src/rules/blocked_period_validation.dart';
 export 'src/rules/field_calendar.dart';
+export 'src/rules/reservation_search.dart';
+export 'src/models/reservation_query.dart';
 export 'src/rules/permissions.dart';
 
 // T08 — Preklapanje, blokirani termini i radno vreme.
@@ -43,6 +45,7 @@ export 'src/rules/reservation_price.dart';
 
 // T09 — Repository port za rezervacije.
 export 'src/repositories/reservation_repository.dart';
+export 'src/repositories/reservation_search_repository.dart';
 export 'src/repositories/auth_repository.dart';
 export 'src/repositories/availability_repository.dart';
 

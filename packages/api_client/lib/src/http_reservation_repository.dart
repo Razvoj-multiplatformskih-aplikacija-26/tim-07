@@ -12,7 +12,8 @@ import 'paging.dart';
 ///
 /// Šta koja uloga vidi određuje server iz tokena (odluka 4): isti
 /// `GET /reservations` vraća različit skup korisniku, vlasniku i administratoru.
-final class HttpReservationRepository implements ReservationRepository {
+final class HttpReservationRepository
+    implements ReservationRepository, ReservationSearchRepository {
   const HttpReservationRepository(this._api);
 
   final ApiClient _api;
@@ -68,6 +69,46 @@ final class HttpReservationRepository implements ReservationRepository {
       fromJson: ReservationDto.fromJson,
     );
     return Page(
+      items: page.items.toDomainKnown(),
+      total: page.total,
+      limit: page.limit,
+      offset: page.offset,
+    );
+  }
+
+  /// Jedna strana tabele rezervacija: filteri, pretraga, sortiranje i strana
+  /// računaju se na serveru (`searchReservations` u domenu), pa tabela traži
+  /// samo ono što prikazuje. Dani idu kao `yyyy-MM-dd`.
+  @override
+  Future<PagedResult<Reservation>> searchReservations(
+    ReservationQuery query,
+  ) async {
+    final from = query.fromDate;
+    final to = query.toDate;
+    final search = query.search.trim();
+
+    final page = await getPageDto(
+      _api,
+      ApiPaths.reservations,
+      query: {
+        if (query.fieldId != null) ApiQuery.fieldId: '${query.fieldId!.value}',
+        if (query.status != null)
+          ApiQuery.status: reservationStatusToCode(query.status!),
+        if (from != null)
+          ApiQuery.from: dateToJson(from.year, from.month, from.day),
+        if (to != null) ApiQuery.to: dateToJson(to.year, to.month, to.day),
+        if (search.isNotEmpty) ApiQuery.search: search,
+        ApiQuery.sort: reservationSortKeyToCode(query.sortKey),
+        ApiQuery.order: query.ascending
+            ? SortOrderCodes.ascending
+            : SortOrderCodes.descending,
+      },
+      limit: query.limit,
+      offset: query.offset,
+      fromJson: ReservationDto.fromJson,
+    );
+
+    return PagedResult(
       items: page.items.toDomainKnown(),
       total: page.total,
       limit: page.limit,

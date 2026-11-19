@@ -7,6 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../actions/reservation_actions.dart';
 import '../selection/reservation_selection_bloc.dart';
 import '../widgets/reservation_details_panel.dart';
+import '../widgets/reservation_filters.dart';
+import '../widgets/reservations_pager.dart';
 import '../widgets/reservations_list.dart';
 import '../widgets/reservations_table.dart';
 import '../widgets/shortcut_hints.dart';
@@ -26,7 +28,6 @@ class _ReservationsPageState extends State<ReservationsPage> {
   bool _tableFocused = false;
   bool _isWide = true;
   bool _narrowDetailsOpen = false;
-  List<Reservation>? _lastReservations;
 
   @override
   void dispose() {
@@ -49,11 +50,18 @@ class _ReservationsPageState extends State<ReservationsPage> {
     context.read<ReservationSelectionBloc>().add(
           ReservationSelectionMoved(
             offset: offset,
-            order: [
-              for (final r in ReservationsTable.ordered(reservations)) r.id,
-            ],
+            // Redosled je onaj iz tabele, a njega određuje izvor.
+            order: [for (final r in reservations) r.id],
           ),
         );
+  }
+
+  void _goToPage(ReservationListLoaded state, int delta) {
+    final index = state.page.pageIndex + delta;
+    if (index < 0 || index >= state.page.pageCount) return;
+    context.read<ReservationListBloc>().add(
+      ReservationListPageRequested(index),
+    );
   }
 
   void _focusAfterFrame(FocusNode node) {
@@ -111,12 +119,17 @@ class _ReservationsPageState extends State<ReservationsPage> {
   }
 
   void _reload() {
-    context.read<ReservationBloc>().add(const ReservationsRequested());
+    context.read<ReservationListBloc>().add(const ReservationListRefreshed());
+  }
+
+  void _sort(ReservationSortKey key) {
+    context.read<ReservationListBloc>().add(ReservationListSortChanged(key));
   }
 
   Map<ShortcutActivator, VoidCallback> _recordShortcuts(
-    List<Reservation> reservations,
+    ReservationListLoaded state,
   ) {
+    final reservations = state.page.items;
     final length = reservations.length;
 
     return {
@@ -130,6 +143,10 @@ class _ReservationsPageState extends State<ReservationsPage> {
           _move(reservations, length),
       const SingleActivator(LogicalKeyboardKey.enter): () =>
           _openDetails(reservations),
+      const SingleActivator(LogicalKeyboardKey.pageDown): () =>
+          _goToPage(state, 1),
+      const SingleActivator(LogicalKeyboardKey.pageUp): () =>
+          _goToPage(state, -1),
     };
   }
 
@@ -146,11 +163,11 @@ class _ReservationsPageState extends State<ReservationsPage> {
     };
   }
 
-  Widget _focusableRecords(List<Reservation> reservations, Widget child) {
+  Widget _focusableRecords(ReservationListLoaded state, Widget child) {
     final colors = Theme.of(context).colorScheme;
 
     return CallbackShortcuts(
-      bindings: _recordShortcuts(reservations),
+      bindings: _recordShortcuts(state),
       child: Focus(
         focusNode: _tableFocus,
         autofocus: true,
@@ -171,7 +188,10 @@ class _ReservationsPageState extends State<ReservationsPage> {
     );
   }
 
-  Widget _buildWide(List<Reservation> reservations) {
+  Widget _buildWide(ReservationListLoaded state) {
+    final reservations = state.page.items;
+    final query = state.query;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -180,8 +200,13 @@ class _ReservationsPageState extends State<ReservationsPage> {
             children: [
               Expanded(
                 child: _focusableRecords(
-                  reservations,
-                  ReservationsTable(reservations: reservations),
+                  state,
+                  ReservationsTable(
+                    reservations: reservations,
+                    sortKey: query.sortKey,
+                    ascending: query.ascending,
+                    onSort: _sort,
+                  ),
                 ),
               ),
               const ShortcutHints(),
@@ -200,7 +225,9 @@ class _ReservationsPageState extends State<ReservationsPage> {
     );
   }
 
-  Widget _buildNarrow(List<Reservation> reservations) {
+  Widget _buildNarrow(ReservationListLoaded state) {
+    final reservations = state.page.items;
+
     if (_narrowDetailsOpen && _selected(reservations) != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -231,7 +258,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
       children: [
         Expanded(
           child: _focusableRecords(
-            reservations,
+            state,
             ReservationsList(
               reservations: reservations,
               onOpen: (_) => _openNarrowDetails(),
@@ -243,7 +270,9 @@ class _ReservationsPageState extends State<ReservationsPage> {
     );
   }
 
-  Widget _buildLoaded(List<Reservation> reservations) {
+  Widget _buildLoaded(ReservationListLoaded state) {
+    final reservations = state.page.items;
+
     return BlocListener<ReservationSelectionBloc, ReservationSelectionState>(
       listenWhen: (previous, current) =>
           previous.selectedId != null && current.selectedId == null,
@@ -258,51 +287,109 @@ class _ReservationsPageState extends State<ReservationsPage> {
           builder: (context, constraints) {
             _isWide = constraints.maxWidth >= ReservationsPage.wideBreakpoint;
 
-            return _isWide
-                ? _buildWide(reservations)
-                : _buildNarrow(reservations);
+            return _isWide ? _buildWide(state) : _buildNarrow(state);
           },
         ),
       ),
     );
   }
 
-  Widget _withProgress(List<Reservation> reservations, {required bool loading}) {
+  Widget _buildLoadedPage(ReservationListLoaded state) {
     return Column(
       children: [
         SizedBox(
           height: 4,
-          child: loading ? const LinearProgressIndicator() : null,
+          child: state.refreshing ? const LinearProgressIndicator() : null,
         ),
-        Expanded(child: _buildLoaded(reservations)),
+        Expanded(child: _buildLoaded(state)),
+        ReservationsPager(
+          page: state.page,
+          onPage: (index) => context.read<ReservationListBloc>().add(
+            ReservationListPageRequested(index),
+          ),
+        ),
       ],
     );
   }
 
+  /// Izabrana rezervacija ostaje izabrana dok je na strani koja se prikazuje;
+  /// kada je filter, pretraga ili strana izbace, izbor se briše.
+  void _keepSelectionIfVisible(ReservationListState state) {
+    final selection = context.read<ReservationSelectionBloc>();
+    final id = selection.state.selectedId;
+    if (id == null) return;
+
+    final visible = switch (state) {
+      ReservationListLoaded(:final page, :final refreshing) =>
+        refreshing || page.items.any((reservation) => reservation.id == id),
+      ReservationListEmpty() || ReservationListNoMatches() => false,
+      _ => true,
+    };
+    if (!visible) selection.add(const ReservationSelectionCleared());
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ReservationBloc, ReservationState>(
-      builder: (context, state) {
-        if (state is ReservationLoaded) {
-          _lastReservations = state.reservations;
-        }
-        if (state is ReservationEmpty || state is ReservationError) {
-          _lastReservations = null;
-        }
+    return MultiBlocListener(
+      listeners: [
+        // Posle potvrde ili otkazivanja tabela se osvežava, jer se stanje
+        // rezervacije (a time i filtriranje) možda promenilo.
+        BlocListener<ReservationBloc, ReservationState>(
+          listenWhen: (previous, current) =>
+              previous is ReservationLoading && current is! ReservationLoading,
+          listener: (context, state) => _reload(),
+        ),
+        BlocListener<ReservationListBloc, ReservationListState>(
+          listener: (context, state) => _keepSelectionIfVisible(state),
+        ),
+      ],
+      child: Column(
+        children: [
+          const ReservationFilters(),
+          Expanded(
+            child: BlocBuilder<ReservationListBloc, ReservationListState>(
+              builder: (context, state) => switch (state) {
+                ReservationListLoaded() => _buildLoadedPage(state),
+                ReservationListLoading() => const _LoadingView(),
+                ReservationListEmpty() => _EmptyView(onReload: _reload),
+                ReservationListNoMatches() => _NoMatchesView(
+                  onClear: () => context.read<ReservationListBloc>().add(
+                    const ReservationListFiltersCleared(),
+                  ),
+                ),
+                ReservationListError(:final message) => _ErrorView(
+                  message: message,
+                  onRetry: _reload,
+                ),
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-        final previous = _lastReservations;
+class _NoMatchesView extends StatelessWidget {
+  final VoidCallback onClear;
 
-        return switch (state) {
-          ReservationLoaded(:final reservations) =>
-            _withProgress(reservations, loading: false),
-          ReservationInitial() || ReservationLoading() when previous != null =>
-            _withProgress(previous, loading: true),
-          ReservationInitial() || ReservationLoading() => const _LoadingView(),
-          ReservationEmpty() => _EmptyView(onReload: _reload),
-          ReservationError(:final message) =>
-            _ErrorView(message: message, onRetry: _reload),
-        };
-      },
+  const _NoMatchesView({required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return _StateView(
+      icon: Icon(
+        Icons.search_off,
+        size: 48,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      title: 'Nema rezervacija za izabrane filtere',
+      message: 'Probajte drugačije filtere ili pretragu.',
+      action: OutlinedButton.icon(
+        onPressed: onClear,
+        icon: const Icon(Icons.filter_alt_off_outlined),
+        label: const Text('Poništi filtere'),
+      ),
     );
   }
 }

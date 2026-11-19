@@ -1,16 +1,21 @@
 
 import 'package:domain/domain.dart';
+// Pravilo se zove kao metoda ove klase, pa se zove preko prefiksa.
+import 'package:domain/domain.dart' as rules show searchReservations;
 
 /// Repozitorijum koji cuva rezervacije u memoriji.
 ///
 /// Ne koristi bazu podataka ni backend.
 // implements znaci da klasa mora da ima sve metode iz ugovora ReservationRepository.
-final class FakeReservationRepository implements ReservationRepository {
+final class FakeReservationRepository
+    implements ReservationRepository, ReservationSearchRepository {
   // "Baza" u memoriji: rezervacije, tereni, radno vreme i blokirani periodi.
   final List<Reservation> _reservations;
   final List<SportsField> _fields;
   final List<FieldSchedule> _schedules;
   final List<BlockedPeriod> _blockedPeriods;
+  // Korisnici, za pretragu i sortiranje tabele po korisniku.
+  final Map<UserId, AppUser> _users;
   // Funkcija koja vraca "sada"; test moze da ubaci svoj sat umesto pravog.
   final DateTime Function() _clock;
   /// Kada je true, citanje rezervacija simulira gresku.
@@ -26,12 +31,14 @@ final class FakeReservationRepository implements ReservationRepository {
     List<SportsField> fields = const [],
     List<FieldSchedule> schedules = const [],
     List<BlockedPeriod> blockedPeriods = const [],
+    List<AppUser> users = const [],
     DateTime Function()? clock,
   })  : // List.of pravi izmenjivu kopiju, pa add radi i kad je prosledjen const [].
         _reservations = List.of(reservations),
         _fields = List.of(fields),
         _schedules = List.of(schedules),
         _blockedPeriods = List.of(blockedPeriods),
+        _users = {for (final user in users) user.id: user},
         // Ako sat nije prosledjen, koristi se pravi (DateTime.now je funkcija bez zagrada).
         _clock = clock ?? DateTime.now,
         // Sledeci id je najveci postojeci id + 1 (fold trazi maksimum).
@@ -83,6 +90,37 @@ final class FakeReservationRepository implements ReservationRepository {
     throw StateError('Teren nije pronadjen.');
   }
 
+
+  /// Strana tabele rezervacija: isto pravilo kao na serveru (`searchReservations`
+  /// iz domena), nad rezervacijama svih korisnika.
+  @override
+  Future<PagedResult<Reservation>> searchReservations(
+    ReservationQuery query,
+  ) async {
+    if (simulateError) {
+      throw StateError('Simulirana greska pri ucitavanju rezervacija.');
+    }
+
+    _refreshStatuses();
+
+    if (simulateEmpty) {
+      return PagedResult(
+        items: const <Reservation>[],
+        total: 0,
+        limit: query.limit,
+        offset: query.offset,
+      );
+    }
+
+    final names = {for (final field in _fields) field.id: field.name};
+
+    return rules.searchReservations(
+      _reservations,
+      query,
+      fieldName: (id) => names[id] ?? '',
+      userOf: (id) => _users[id],
+    );
+  }
 
   // async umotava rezultat i bacenu gresku u Future, da se poklopi sa ugovorom.
   @override

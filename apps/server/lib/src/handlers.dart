@@ -146,21 +146,56 @@ final class TerenzoHandlers {
 
   Future<Response> reservations(Request request) async {
     final actor = actorOf(request);
+    final (limit, offset) = _pageParams(request);
     final fieldId = _optionalQuery(request, ApiQuery.fieldId);
     final status = _optionalQuery(request, ApiQuery.status);
-    final fieldFilter = fieldId == null ? null : FieldId(parseBody(() => int.parse(fieldId)));
-    final statusFilter =
-        status == null ? null : parseBody(() => requireKnown(reservationStatusFromCode(status), 'status', status));
+    final from = _optionalQuery(request, ApiQuery.from);
+    final to = _optionalQuery(request, ApiQuery.to);
+    final sort = _optionalQuery(request, ApiQuery.sort);
+    final order = _optionalQuery(request, ApiQuery.order);
+
+    final query = ReservationQuery(
+      fieldId: fieldId == null ? null : FieldId(parseBody(() => int.parse(fieldId))),
+      status: status == null ? null : parseBody(() => requireKnown(reservationStatusFromCode(status), 'status', status)),
+      fromDate: from == null ? null : parseBody(() => _localDay(from)),
+      toDate: to == null ? null : parseBody(() => _localDay(to)),
+      search: _optionalQuery(request, ApiQuery.search) ?? '',
+      sortKey: sort == null
+          ? ReservationSortKey.startTime
+          : parseBody(() => requireKnown(reservationSortKeyFromCode(sort), 'sort', sort)),
+      ascending: switch (order) {
+        null || SortOrderCodes.ascending => true,
+        SortOrderCodes.descending => false,
+        _ => throw Refused.badRequest(ApiQuery.order),
+      },
+      limit: limit,
+      offset: offset,
+    );
+
     final fields = {for (final field in await terenzo.getFields()) field.id: field};
+    final users = {for (final user in await terenzo.getUsers()) user.id: user};
     final visible = [
       for (final reservation in await terenzo.getReservations())
-        if (fields[reservation.fieldId] case final field?
-            when canViewReservation(actor, reservation, field) &&
-                (fieldFilter == null || reservation.fieldId == fieldFilter) &&
-                (statusFilter == null || reservation.status == statusFilter))
+        if (fields[reservation.fieldId] case final field? when canViewReservation(actor, reservation, field))
           reservation,
     ];
-    return _page(request, visible, (reservation) => reservation.toDto().toJson());
+
+    // Pravilo tabele je u domenu, isto kao u lažnom izvoru u klijentu.
+    final page = searchReservations(
+      visible,
+      query,
+      fieldName: (id) => fields[id]?.name ?? '',
+      userOf: (id) => users[id],
+    );
+    return json(
+      200,
+      PageDto(
+        items: page.items,
+        total: page.total,
+        limit: page.limit,
+        offset: page.offset,
+      ).toJson((reservation) => reservation.toDto().toJson()),
+    );
   }
 
   Future<Response> reservation(Request request) async {
@@ -318,11 +353,17 @@ final class TerenzoHandlers {
   }
 }
 
-Response _page<T>(Request request, List<T> items, Map<String, Object?> Function(T item) toJson) {
+/// `limit` i `offset` iz upita, proverene (odluka 6).
+(int, int) _pageParams(Request request) {
   final limit = parseBody(() => int.parse(_optionalQuery(request, ApiQuery.limit) ?? '${ApiPaging.defaultLimit}'));
   final offset = parseBody(() => int.parse(_optionalQuery(request, ApiQuery.offset) ?? '0'));
   if (limit < 1 || limit > ApiPaging.maxLimit) throw Refused.badRequest(ApiQuery.limit);
   if (offset < 0) throw Refused.badRequest(ApiQuery.offset);
+  return (limit, offset);
+}
+
+Response _page<T>(Request request, List<T> items, Map<String, Object?> Function(T item) toJson) {
+  final (limit, offset) = _pageParams(request);
   final pageItems = items.skip(offset).take(limit).toList();
   return json(
     200,

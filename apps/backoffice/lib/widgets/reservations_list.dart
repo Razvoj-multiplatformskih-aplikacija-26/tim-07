@@ -6,7 +6,6 @@ import '../data/directory.dart';
 import '../selection/reservation_selection_bloc.dart';
 import '../text/labels.dart';
 import 'reservation_status_chip.dart';
-import 'reservations_table.dart';
 
 class ReservationsList extends StatelessWidget {
   final List<Reservation> reservations;
@@ -24,7 +23,7 @@ class ReservationsList extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final selectedId =
         context.watch<ReservationSelectionBloc>().state.selectedId;
-    final sorted = ReservationsTable.ordered(reservations);
+    final sorted = reservations;
 
     return ListView.separated(
       itemCount: sorted.length,

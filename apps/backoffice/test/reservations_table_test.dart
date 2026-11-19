@@ -54,16 +54,22 @@ void main() {
     expect(table(tester).rows.length, reservations.length);
   });
 
-  testWidgets('Redovi su sortirani po pocetku termina', (tester) async {
+  testWidgets('Redovi ostaju onim redosledom kojim su stigli', (tester) async {
     await pumpTable(tester);
 
-    final rows = table(tester).rows;
-    final firstKey = rows.first.key! as ValueKey<int>;
+    // Sortiranje radi izvor podataka, ne tabela.
+    final keys = [
+      for (final row in table(tester).rows) (row.key! as ValueKey<int>).value,
+    ];
 
-    final earliest = [...reservations]
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    expect(keys, [for (final reservation in reservations) reservation.id.value]);
+  });
 
-    expect(firstKey.value, earliest.first.id.value);
+  testWidgets('Zaglavlje pokazuje kolonu i smer sortiranja', (tester) async {
+    await pumpTable(tester);
+
+    expect(table(tester).sortColumnIndex, 3);
+    expect(table(tester).sortAscending, isTrue);
   });
 
   testWidgets('Klik na red bira i oznacava rezervaciju', (tester) async {

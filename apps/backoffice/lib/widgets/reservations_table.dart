@@ -8,12 +8,42 @@ import '../text/labels.dart';
 import 'reservation_status_chip.dart';
 
 class ReservationsTable extends StatelessWidget {
+  /// Redovi onim redosledom kojim su stigli: sortiranje radi izvor
+  /// (`ReservationQuery`), pa strana i redosled uvek idu zajedno.
   final List<Reservation> reservations;
 
-  const ReservationsTable({super.key, required this.reservations});
+  /// Kolona po kojoj su redovi sortirani i smer; zaglavlje to pokazuje.
+  final ReservationSortKey sortKey;
+  final bool ascending;
 
-  static List<Reservation> ordered(List<Reservation> reservations) =>
-      [...reservations]..sort((a, b) => a.startTime.compareTo(b.startTime));
+  /// Klik na zaglavlje sortabilne kolone. Izvor odlučuje o smeru.
+  final ValueChanged<ReservationSortKey>? onSort;
+
+  const ReservationsTable({
+    super.key,
+    required this.reservations,
+    this.sortKey = ReservationSortKey.startTime,
+    this.ascending = true,
+    this.onSort,
+  });
+
+  static const _sortColumns = <ReservationSortKey, int>{
+    ReservationSortKey.id: 0,
+    ReservationSortKey.field: 1,
+    ReservationSortKey.user: 2,
+    ReservationSortKey.startTime: 3,
+    ReservationSortKey.status: 5,
+  };
+
+  DataColumn _column(String label, {ReservationSortKey? key, bool numeric = false}) {
+    final onSort = this.onSort;
+    return DataColumn(
+      label: Text(label),
+      numeric: numeric,
+      tooltip: key == null ? null : 'Sortiraj po koloni: $label',
+      onSort: key == null || onSort == null ? null : (_, _) => onSort(key),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +52,7 @@ class ReservationsTable extends StatelessWidget {
     final selectedId =
         context.watch<ReservationSelectionBloc>().state.selectedId;
 
-    final sorted = ordered(reservations);
+    final sorted = reservations;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -33,14 +63,16 @@ class ReservationsTable extends StatelessWidget {
               constraints: BoxConstraints(minWidth: constraints.maxWidth),
               child: DataTable(
                 showCheckboxColumn: false,
+                sortColumnIndex: _sortColumns[sortKey],
+                sortAscending: ascending,
                 headingTextStyle: Theme.of(context).textTheme.labelLarge,
-                columns: const [
-                  DataColumn(label: Text('ID'), numeric: true),
-                  DataColumn(label: Text('Teren')),
-                  DataColumn(label: Text('Korisnik')),
-                  DataColumn(label: Text('Datum')),
-                  DataColumn(label: Text('Vreme')),
-                  DataColumn(label: Text('Status')),
+                columns: [
+                  _column('ID', key: ReservationSortKey.id, numeric: true),
+                  _column('Teren', key: ReservationSortKey.field),
+                  _column('Korisnik', key: ReservationSortKey.user),
+                  _column('Datum', key: ReservationSortKey.startTime),
+                  _column('Vreme'),
+                  _column('Status', key: ReservationSortKey.status),
                 ],
                 rows: [
                   for (final reservation in sorted)
