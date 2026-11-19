@@ -240,7 +240,7 @@ cd apps/mobile
 flutter run
 ```
 
-Backoffice nalazi server na `http://localhost:8080`; druga adresa se zadaje sa `--dart-define=SERVER_URL=http://<adresa>:8080`. Pregledač sme da zove server samo sa adrese iz `CORS_ORIGINS` u `.env`, pa se backoffice u pregledaču pokreće na portu 8081.
+Backoffice nalazi server na `http://localhost:8080`; druga adresa se zadaje sa `--dart-define=SERVER_URL=http://<adresa>:8080`. Mobilna aplikacija bira adresu sama: Android emulator vidi računar na `http://10.0.2.2:8080`, ostalo (simulator, desktop, veb) na `http://localhost:8080`. Pravi telefon sa USB kablom: `adb reverse tcp:8080 tcp:8080`, pa `flutter run --dart-define=SERVER_URL=http://localhost:8080`; telefon na istoj mreži: `--dart-define=SERVER_URL=http://<adresa računara>:8080` (Android dozvoljava HTTP bez TLS-a samo za `10.0.2.2`, `localhost` i `127.0.0.1`, vidi `network_security_config.xml`, pa za drugu adresu treba HTTPS ili `adb reverse`). Pregledač sme da zove server samo sa adrese iz `CORS_ORIGINS` u `.env`, pa se backoffice u pregledaču pokreće na portu 8081.
 
 #### Demo nalozi
 

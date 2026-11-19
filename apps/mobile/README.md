@@ -8,13 +8,31 @@ cd apps/mobile && flutter run
 flutter test
 ```
 
+## Server
+
+Aplikacija radi nad serverom (`apps/server`), ne nad podacima u memoriji. Podaci stižu preko `MobileServer` (`lib/data/mobile_server.dart`),
+jedinog mesta koje zna za HTTP: pravi `HttpReservationRepository`, `HttpFieldRepository`, `HttpScheduleRepository`,
+`HttpAvailabilityRepository` i `HttpSessionRepository` iz `packages/api_client`. `MyApp`, ekrani i Bloc-ovi primaju portove iz domena,
+pa isti kod radi i nad lažnim repozitorijumima (testovi `*_screen_test.dart`) i nad serverom (`server_flow_test.dart`).
+
+- **Adresa servera** se zadaje pri pokretanju, bez izmene koda: `flutter run --dart-define=SERVER_URL=http://192.168.0.5:8080`.
+  Bez nje se uzima ona koja radi na tom uređaju (`lib/server_address.dart`): Android emulator `http://10.0.2.2:8080`, ostalo `http://localhost:8080`.
+  Pravi telefon sa USB kablom: `adb reverse tcp:8080 tcp:8080`, pa `--dart-define=SERVER_URL=http://localhost:8080`.
+- **Android** traži dozvolu `INTERNET` (u glavnom manifestu) i dozvoljava HTTP bez TLS-a samo za `10.0.2.2`, `localhost` i `127.0.0.1`
+  (`android/app/src/main/res/xml/network_security_config.xml`). Za svaki drugi server treba HTTPS.
+- **Server nedostupan:** zahtev ističe posle 10 sekundi, pa ekran pokaže poruku „Server trenutno nije dostupan.“ i „Pokušaj ponovo“, ne ostaje
+  u učitavanju bez kraja. Isto važi za slanje rezervacije: unos ostaje, pa se ponovno slanje može pokušati.
+- **Odbijen poziv** (npr. termin koji je neko drugi zauzeo): ekran prikazuje razlog iz koda greške (ista poruka kao kad pravilo proveri klijent),
+  a forma ponovo čita radno vreme, blokade i rezervacije korisnika.
+- **Prijava:** token čuva `session_storage` (bezbedno skladište platforme), a nalog dolazi sa servera. Demo nalozi su u glavnom README-u.
+
 ## Prijava
 
 Katalog terena (`/`, `/fields`, `/fields/:id`) je javan. Rezervisanje i moje rezervacije traže prijavu:
 bez nje router vodi na `/login?from=<adresa>`, a posle prijave nazad na tu adresu.
 
-- Prijavu vodi zajednički `AuthBloc` (`packages/blocs`) nad `AuthRepository`. Dok aplikacija nema server (T52), iza njega je
-  `FakeAuthRepository` sa demo nalozima (`MobileDemoData.accounts`); sa serverom ga menja `HttpSessionRepository`.
+- Prijavu vodi zajednički `AuthBloc` (`packages/blocs`) nad `AuthRepository`. Aplikacija koristi `HttpSessionRepository`;
+  `FakeAuthRepository` sa demo nalozima (`MobileDemoData.accounts`) ostaje za testove ekrana.
 - Prijavljen korisnik se čita iz `AuthBloc`-a (`context.watchUser` / `context.readUser`), nigde iz demo podataka.
 - Mobilna aplikacija prima samo korisnike (`canSignIn` iz domena): vlasnik se odbija uz poruku, a prijava se ne pamti.
 - Istek prijave: na zaštićenom ekranu aplikacija vraća na prijavu uz poruku „Prijava je istekla. Prijavite se ponovo.“,
@@ -23,7 +41,7 @@ bez nje router vodi na `/login?from=<adresa>`, a posle prijave nazad na tu adres
 
 ## Katalog terena
 
-Tereni dolaze iz `SportsFieldRepository` (iza njega je lažni repozitorijum u memoriji, dok nema servera), ne iz demo podataka u ekranima.
+Tereni dolaze iz `SportsFieldRepository` (u aplikaciji `HttpFieldRepository`, u testovima lažni repozitorijum u memoriji), ne iz demo podataka u ekranima.
 
 - `FieldsBloc` (`packages/blocs`) drži katalog: učitavanje, pretragu, sport i redosled. Ima četiri stanja ekrana: učitavanje,
   greška sa „Pokušaj ponovo“, prazan katalog i tereni. Pretraga, sport i redosled se primenjuju nad učitanom listom, bez novog zahteva,
