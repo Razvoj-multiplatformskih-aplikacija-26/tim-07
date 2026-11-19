@@ -81,24 +81,6 @@ abstract final class MobileDemoData {
     );
   }
 
-  static SportsField? fieldById(FieldId id) {
-    for (final field in fields) {
-      if (field.id == id) {
-        return field;
-      }
-    }
-    return null;
-  }
-
-  static String fieldName(FieldId id) {
-    for (final field in fields) {
-      if (field.id == id) {
-        return field.name;
-      }
-    }
-    return 'Teren #${id.value}';
-  }
-
   static List<Reservation> createReservations({DateTime? now}) {
     final current = now ?? DateTime.now();
     final today = DateTime(current.year, current.month, current.day);

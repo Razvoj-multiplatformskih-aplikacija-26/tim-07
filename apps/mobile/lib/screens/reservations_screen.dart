@@ -7,7 +7,7 @@ import 'package:messages/messages.dart';
 
 import '../actions/reservation_cancel.dart';
 import '../auth/current_user.dart';
-import '../data/mobile_demo_data.dart';
+import '../fields/field_names.dart';
 import '../text/reservation_texts.dart';
 import '../widgets/account_button.dart';
 import '../widgets/simulation_menu.dart';
@@ -199,7 +199,7 @@ class _ReservationCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                MobileDemoData.fieldName(reservation.fieldId),
+                context.fieldName(reservation.fieldId),
                 style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
