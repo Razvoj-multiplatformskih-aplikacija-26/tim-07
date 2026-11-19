@@ -288,3 +288,14 @@ Vlasnik vidi dan ili nedelju svojih terena, termin po termin.
 **Odbačeno.**
 - *Mreža sa satnicom (visina reda prema trajanju).* Lepša je na velikom ekranu, ali loše se prilagođava uskom prozoru i čitaču ekrana. Lista termina po koloni radi svuda, a rezervacija od više sati je jedan red sa svojim opsegom.
 - *Svi tereni u nedeljnom prikazu.* Vidi gore.
+
+## 18. Gde je Bloc, a gde lokalno stanje (backoffice)
+
+**Odluka.** Bloc postoji tamo gde stanje dolazi sa servera ili ga deli više ekrana; sve ostalo je stanje widgeta.
+
+- **Deljeni Bloc-ovi u `packages/blocs`, po oblastima** (`auth`, `reservations`, `fields`, `field_management`, `field_review`, `blocked_periods`, `calendar`, `statistics`, …). Svaki radi samo preko portova iz domena, pa ga isto koriste mobilna aplikacija, backoffice i testovi sa lažnim repozitorijumima. `AuthBloc` i `ReservationBloc` koriste oba klijenta.
+- **U backoffice-u ostaju samo dva lokalna:** `ReservationSelectionBloc` (koja je rezervacija izabrana, deli ga tabela, lista, panel i tastatura) i `DirectoryCubit` (imena terena za tabelu, učitana sa servera posle prijave). Ne trebaju mobilnoj aplikaciji, pa nisu u zajedničkom paketu.
+- **Bez Bloc-a:** izabrana sekcija u navigaciji, otvoren dijalog, polja forme pre slanja i radno vreme pre čuvanja. To je stanje jednog widgeta; Bloc dobija tek gotov zahtev (`FieldSaveRequested`, `FieldScheduleSaveRequested`, `FieldReviewDecided`).
+- Nijedan widget ne čita `BackofficeDemoData`; demo podaci su samo izvor za lažne repozitorijume u testovima i demo režimu.
+
+**Odbačeno.** *Bloc za svaku stranicu i svaki dijalog.* Više koda bez koristi: stanje koje vidi samo jedan widget ne treba da prolazi kroz događaje i stanja, a teže se prati na odbrani.
