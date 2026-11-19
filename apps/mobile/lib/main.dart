@@ -4,27 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:messages/messages.dart';
+import 'package:session_storage/session_storage.dart';
 
-import 'data/mobile_auth.dart';
-import 'data/mobile_availability_repository.dart';
-import 'data/mobile_field_repository.dart';
-import 'data/mobile_repository.dart';
-import 'data/mobile_schedule_repository.dart';
+import 'data/mobile_server.dart';
 import 'navigation/app_router.dart';
+import 'server_address.dart';
 import 'theme/app_theme.dart';
 
 void main() {
-  final reservations = createMobileRepository();
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final server = MobileServer.connect(
+    baseUri: serverAddress(),
+    session: createSessionStore(),
+  );
 
   runApp(
     MyApp(
-      repository: reservations,
-      availabilityRepository: createMobileAvailabilityRepository(
-        reservations: reservations,
-      ),
-      fieldRepository: createMobileFieldRepository(),
-      scheduleRepository: createMobileScheduleRepository(),
-      authRepository: createMobileAuthRepository(),
+      repository: server.reservations,
+      availabilityRepository: server.availability,
+      fieldRepository: server.fields,
+      scheduleRepository: server.schedules,
+      authRepository: server.auth,
     ),
   );
 }

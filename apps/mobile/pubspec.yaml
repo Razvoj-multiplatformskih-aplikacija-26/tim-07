@@ -34,6 +34,11 @@ dependencies:
     path: ../../packages/blocs
   messages:
     path: ../../packages/messages
+  api_client:
+    path: ../../packages/api_client
+  session_storage:
+    path: ../../packages/session_storage
+  http: ^1.2.0
   flutter_bloc: ^9.1.1
   flutter:
     sdk: flutter
@@ -46,6 +51,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  contract:
+    path: ../../packages/contract
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
