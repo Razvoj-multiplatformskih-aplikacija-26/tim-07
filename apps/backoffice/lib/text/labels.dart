@@ -83,3 +83,23 @@ String formatDateTimeRange(DateTime start, DateTime end) {
       ? '${formatDate(start)} ${formatTimeRange(start, end)}'
       : '${formatDateTime(start)} - ${formatDateTime(end)}';
 }
+
+/// „Pet“ za petak, na srpskom.
+String weekdayShort(DateTime date) =>
+    const ['Pon', 'Uto', 'Sre', 'Čet', 'Pet', 'Sub', 'Ned'][date.weekday - 1];
+
+/// „Petak“ za petak, na srpskom.
+String weekdayLong(DateTime date) => const [
+      'Ponedeljak',
+      'Utorak',
+      'Sreda',
+      'Četvrtak',
+      'Petak',
+      'Subota',
+      'Nedelja',
+    ][date.weekday - 1];
+
+/// „20.11.“
+String formatDayMonth(DateTime date) =>
+    '${date.day.toString().padLeft(2, '0')}.'
+    '${date.month.toString().padLeft(2, '0')}.';

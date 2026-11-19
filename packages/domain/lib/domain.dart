@@ -31,6 +31,7 @@ export 'src/rules/occupancy.dart';
 export 'src/rules/staff_cancellation.dart';
 export 'src/rules/availability.dart';
 export 'src/rules/blocked_period_validation.dart';
+export 'src/rules/field_calendar.dart';
 export 'src/rules/permissions.dart';
 
 // T08 — Preklapanje, blokirani termini i radno vreme.

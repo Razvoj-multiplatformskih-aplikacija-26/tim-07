@@ -270,3 +270,21 @@ Vlasnik blokira deo terena (održavanje, događaj). Blokada je zapis sa terenom,
 **Odbačeno.**
 - *MySQL sa pokretačem migracija u samom serveru.* Prva verzija. Server je morao da zna redosled i istoriju migracija i da ih štiti od dva istovremena pokretanja; dbmate to već radi i odvaja šemu od koda servera.
 - *Početni podaci kao SQL migracija.* Datumi bi bili fiksni i zastareli bi posle nekoliko dana; seed u serveru pravi termine u odnosu na trenutni datum.
+
+
+## 17. Kalendar rezervacija
+
+Vlasnik vidi dan ili nedelju svojih terena, termin po termin.
+
+- Redove kalendara računa domen (`buildFieldCalendarDay`) iz radnog vremena terena, rezervacija i blokada. Isto radno vreme koristi `calculateAvailability`, pa kalendar i aplikacija za korisnike ne prikazuju različite termine. `CalendarBloc` samo učitava podatke i drži opseg.
+- **Dnevni prikaz:** kolona po terenu za izabrani dan. **Nedeljni prikaz:** kolona po danu (od ponedeljka) za jedan teren koji vlasnik bira. Svi tereni u sedam kolona bi bili previše za uski prozor, a vlasnik pregleda nedelju jednog terena odjednom.
+- Redovi: slobodno, prošlo (slobodan termin koji je već počeo), na čekanju, potvrđena, završena i blokirano. Svaki red ima i ikonu i tekst stanja, a legenda ih objašnjava; boja nije jedini nosilac značenja.
+- Otkazana rezervacija nije u kalendaru: njen termin je slobodan. To važi i za rezervaciju koja je automatski otkazana (`resolveReservationStatus`): na čekanju kojoj je istekao rok, ili potvrđenu bez check-in-a posle roka. Kalendar zato ne pravi izuzetak od pravila koje važi na serveru.
+- Rezervacija i blokada koje se preklapaju (moguće samo za rezervaciju na čekanju) se prikazuju obe; termin pripada rezervaciji, da je vlasnik vidi i može da je odbije.
+- Pomeranje menja opseg odmah (naslov i dugmad ostaju na mestu, a kolone čekaju učitavanje), a zastareo odgovor se odbacuje. Osvežavanje istog opsega zadržava stare kolone dok nove ne stignu. Greška pri učitavanju opsega zadržava novi naslov i nudi „Pokušaj ponovo“.
+- Klik ili Enter na rezervaciju otvara iste detalje i akcije kao tabela (`ReservationDetailsPanel`). Posle potvrde ili otkazivanja `ReservationBloc` javlja da je gotov, pa se kalendar osvežava. U uskom prozoru detalji zamenjuju kalendar uz „Nazad na kalendar“.
+- Tastatura: strelice levo i desno pomeraju opseg, `T` vraća na danas, a rezervacije su u redosledu za Tab.
+
+**Odbačeno.**
+- *Mreža sa satnicom (visina reda prema trajanju).* Lepša je na velikom ekranu, ali loše se prilagođava uskom prozoru i čitaču ekrana. Lista termina po koloni radi svuda, a rezervacija od više sati je jedan red sa svojim opsegom.
+- *Svi tereni u nedeljnom prikazu.* Vidi gore.
