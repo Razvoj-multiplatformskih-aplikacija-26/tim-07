@@ -2,7 +2,7 @@ import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/backoffice_demo_data.dart';
+import '../data/directory.dart';
 import '../selection/reservation_selection_bloc.dart';
 import '../text/labels.dart';
 import 'reservation_status_chip.dart';
@@ -17,6 +17,7 @@ class ReservationsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final directory = context.watch<DirectoryCubit>().state;
     final colors = Theme.of(context).colorScheme;
     final selectedId =
         context.watch<ReservationSelectionBloc>().state.selectedId;
@@ -58,12 +59,12 @@ class ReservationsTable extends StatelessWidget {
                         DataCell(Text('#${reservation.id.value}')),
                         DataCell(
                           Text(
-                            BackofficeDemoData.fieldName(reservation.fieldId),
+                            directory.fieldName(reservation.fieldId),
                           ),
                         ),
                         DataCell(
                           Text(
-                            BackofficeDemoData.userName(reservation.userId),
+                            directory.userName(reservation.userId),
                           ),
                         ),
                         DataCell(Text(formatDate(reservation.startTime))),

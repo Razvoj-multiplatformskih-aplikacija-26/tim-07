@@ -1,4 +1,5 @@
 import 'package:backoffice/data/backoffice_demo_data.dart';
+import 'package:backoffice/data/directory.dart';
 import 'package:backoffice/selection/reservation_selection_bloc.dart';
 import 'package:backoffice/widgets/reservations_table.dart';
 import 'package:domain/domain.dart';
@@ -27,8 +28,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: BlocProvider.value(
-            value: selection,
+          body: MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: selection),
+              BlocProvider(create: (_) => DirectoryCubit(initial: BackofficeDirectory.demo())),
+            ],
             child: ReservationsTable(reservations: reservations),
           ),
         ),

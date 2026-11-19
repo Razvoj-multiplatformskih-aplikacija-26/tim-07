@@ -1,20 +1,19 @@
+import 'package:api_client/api_client.dart';
 import 'package:flutter/material.dart';
+import 'package:session_storage/session_storage.dart';
 
 import 'app.dart';
-import 'data/backoffice_demo_data.dart';
-import 'data/backoffice_repository.dart';
+import 'server_address.dart';
 
 void main() {
-  final reservations = createBackofficeRepository();
-
+  WidgetsFlutterBinding.ensureInitialized();
+  final api = ApiClient(baseUri: serverAddress(), session: createSessionStore());
   runApp(
     BackofficeApp(
-      repository: reservations,
-      fieldRepository: createBackofficeFieldRepository(),
-      scheduleRepository: createBackofficeScheduleRepository(
-        reservations: reservations,
-      ),
-      owner: BackofficeDemoData.owner,
+      repository: HttpReservationRepository(api),
+      fieldRepository: HttpFieldRepository(api),
+      scheduleRepository: HttpScheduleRepository(api),
+      authRepository: HttpSessionRepository(api),
     ),
   );
 }

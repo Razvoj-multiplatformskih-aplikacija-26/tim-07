@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../actions/reservation_actions.dart';
-import '../data/backoffice_demo_data.dart';
+import '../data/directory.dart';
 import '../selection/reservation_selection_bloc.dart';
 import '../text/labels.dart';
 import 'reservation_status_chip.dart';
@@ -94,9 +94,10 @@ class _Details extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final directory = context.watch<DirectoryCubit>().state;
     final theme = Theme.of(context);
-    final field = BackofficeDemoData.fieldById(reservation.fieldId);
-    final user = BackofficeDemoData.userById(reservation.userId);
+    final field = directory.field(reservation.fieldId);
+    final user = directory.user(reservation.userId);
     final transitions = allowedTransitions(reservation);
 
     return ListView(
