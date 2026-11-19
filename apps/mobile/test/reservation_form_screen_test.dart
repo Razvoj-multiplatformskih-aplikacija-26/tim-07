@@ -40,6 +40,10 @@ final class _FlakySchedules implements FieldScheduleRepository {
   @override
   Future<BlockedPeriod> addBlockedPeriod(BlockedPeriod period) =>
       inner.addBlockedPeriod(period);
+
+  @override
+  Future<void> removeBlockedPeriod(FieldId fieldId, BlockedPeriodId id) =>
+      inner.removeBlockedPeriod(fieldId, id);
 }
 
 void main() {

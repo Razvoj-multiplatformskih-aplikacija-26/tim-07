@@ -610,14 +610,92 @@ void main() {
       expect(AvailabilityDto.fromJson(wire(dto.toJson())).toDomain(), isEmpty);
     });
 
-    test('nepoznato stanje termina baca izuzetak, ne pretvara se u slobodan', () {
-      final dto = SlotDto(
-        startTime: DateTime.utc(2026, 11, 20, 8),
-        endTime: DateTime.utc(2026, 11, 20, 9),
-        state: 'maintenance',
+    test(
+      'nepoznato stanje termina baca izuzetak, ne pretvara se u slobodan',
+      () {
+        final dto = SlotDto(
+          startTime: DateTime.utc(2026, 11, 20, 8),
+          endTime: DateTime.utc(2026, 11, 20, 9),
+          state: 'maintenance',
+        );
+
+        expect(dto.toDomain, throwsA(isA<UnknownCodeException>()));
+      },
+    );
+  });
+
+  group('blokade terena', () {
+    final block = BlockedPeriod(
+      id: const BlockedPeriodId(5),
+      fieldId: const FieldId(3),
+      startTime: DateTime.utc(2026, 11, 21, 8),
+      endTime: DateTime.utc(2026, 11, 21, 12),
+      reason: 'Održavanje',
+    );
+
+    test('blokada sa identifikatorom prolazi kroz ugovor i JSON', () {
+      final back = BlockedPeriodDto.fromJson(wire(block.toDto().toJson()))
+          .toDomain();
+
+      expect(back.id, const BlockedPeriodId(5));
+      expect(back.fieldId, const FieldId(3));
+      expect(back.reason, 'Održavanje');
+    });
+
+    test('blokada bez identifikatora ostaje bez njega', () {
+      final draft = BlockedPeriod(
+        fieldId: const FieldId(3),
+        startTime: DateTime.utc(2026, 11, 21, 8),
+        endTime: DateTime.utc(2026, 11, 21, 12),
       );
 
-      expect(dto.toDomain, throwsA(isA<UnknownCodeException>()));
+      expect(
+        BlockedPeriodDto.fromJson(wire(draft.toDto().toJson())).toDomain().id,
+        isNull,
+      );
+    });
+
+    test('svako pravilo blokade ima kod i vraća se kao isto pravilo', () {
+      const errors = <BlockedPeriodError>[
+        InvalidBlockRange(),
+        BlockInPast(),
+        BlockOverlapsConfirmedReservation(),
+      ];
+
+      for (final error in errors) {
+        final dto = ErrorDto.fromJson(wire(error.toErrorDto().toJson()));
+
+        expect(dto.isKnown, isTrue, reason: dto.code);
+        expect(dto.toBlockedPeriodError().runtimeType, error.runtimeType);
+        // Isti kod nije pravilo rezervacije.
+        expect(dto.toValidationError(), isNull);
+      }
+      expect({
+        for (final e in errors) e.toErrorDto().code,
+      }, hasLength(errors.length));
+    });
+
+    test('preklapanje sa rezervacijom je 409, ostalo 422', () {
+      expect(const BlockOverlapsConfirmedReservation().toFailure().status, 409);
+      expect(const InvalidBlockRange().toFailure().status, 422);
+      expect(const BlockInPast().toFailure().status, 422);
+    });
+
+    test('izuzetak repozitorijuma postaje greška za mrežu', () {
+      final failure = failureOf(
+        const BlockedPeriodRuleViolation(BlockOverlapsConfirmedReservation()),
+      );
+
+      expect(failure!.error.code, ErrorCodes.blockOverlapsReservation);
+      expect(failure.status, 409);
+    });
+
+    test('kod rezervacije nije pravilo blokade', () {
+      expect(
+        const ErrorDto(code: ErrorCodes.slotTaken).toBlockedPeriodError(),
+        isNull,
+      );
+      expect(const ErrorDto(code: 'nepoznat').toBlockedPeriodError(), isNull);
     });
   });
 }

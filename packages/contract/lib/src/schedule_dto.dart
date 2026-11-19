@@ -107,12 +107,15 @@ final class ScheduleDto {
 
 /// Blokirani period terena (održavanje, događaj).
 final class BlockedPeriodDto {
+  /// Dodeljuje ga server; potreban je za brisanje.
+  final int? id;
   final int fieldId;
   final DateTime startTime;
   final DateTime endTime;
   final String? reason;
 
   const BlockedPeriodDto({
+    this.id,
     required this.fieldId,
     required this.startTime,
     required this.endTime,
@@ -120,6 +123,7 @@ final class BlockedPeriodDto {
   });
 
   Map<String, Object?> toJson() => {
+    'id': ?id,
     'fieldId': fieldId,
     'startTime': instantToJson(startTime),
     'endTime': instantToJson(endTime),
@@ -128,6 +132,7 @@ final class BlockedPeriodDto {
 
   factory BlockedPeriodDto.fromJson(Map<String, Object?> json) =>
       BlockedPeriodDto(
+        id: jsonOptionalInt(json, 'id'),
         fieldId: jsonInt(json, 'fieldId'),
         startTime: jsonInstant(json, 'startTime'),
         endTime: jsonInstant(json, 'endTime'),

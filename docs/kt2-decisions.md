@@ -241,3 +241,24 @@ Poruku na srpskom pravi klijent iz koda, istom funkcijom kao kada pravilo prover
 **Odbačeno.**
 - *Računanje u klijentu.* Klijent bi morao da preuzme sve rezervacije svih terena za ceo period, uključujući tuđe podatke, samo da bi prikazao nekoliko brojeva.
 - *Ceo proračun u jednom SQL upitu.* Radno vreme po danima, blokade i rezervacije preko granice perioda teško se izražavaju u SQL-u, a pravilo bi postojalo i u SQL-u i u domenu. Ovako je ista funkcija proverena unit testovima bez baze.
+
+
+## 15. Blokiranje termina
+
+Vlasnik blokira deo terena (održavanje, događaj). Blokada je zapis sa terenom, početkom, krajem i razlogom, i ima `id` da bi mogla da se ukloni.
+
+- Pravilo je u `validateBlockedPeriod` (domen), a izvršavaju ga isto server (`MySqlFieldScheduleRepository`) i lažni izvor (`FakeFieldScheduleRepository`). Tri razloga odbijanja: kraj nije posle početka (`invalid_block_range`), blokada je cela u prošlosti (`block_in_past`) i preklapa se sa potvrđenom rezervacijom (`block_overlaps_reservation`).
+- Blokadu sprečava samo **potvrđena** rezervacija. Rezervaciju na čekanju vlasnik može da odbije, pa ne sme da zaključa blokadu. Potvrđena rezervacija kojoj je istekao rok se računa kao otkazana (`resolveReservationStatus`), isto kao u proveri slobodnih termina.
+- Server upisuje blokadu u transakciji i prvo zaključa red terena (`FOR UPDATE`), isto kao pri pravljenju rezervacije. Zato istovremena blokada i rezervacija ne mogu obe da uspeju; test pokreće obe i traži tačno jedan uspeh.
+- Obe strane, rezervacija i blokada, koriste isto pravilo: posle blokade `validateReservationSlot` vraća `FieldBlocked`, pa mobilna aplikacija termin ne nudi (preko `calculateAvailability`).
+- Vlasnik blokira samo svoje terene (`canManageField`). `BlockedPeriodsBloc` ne nudi tuđe terene, a ako ipak stigne zahtev za tuđi teren, odgovor je zabranjeno.
+- Posle svakog odbijanja Bloc ponovo učitava spisak, jer je odbijanje najčešće znak da se nešto promenilo na serveru.
+- Putanja za uklanjanje je `DELETE /fields/:id/blocked-periods/:blockId`. Server proverava da blokada pripada tom terenu, inače je „nije pronađeno“.
+
+**Poznata ograničenja.**
+- Backoffice još nema prijavu (T51), pa radi kao demo vlasnik (`BackofficeDemoData.owner`). Kada prijava stigne, `owner` dolazi iz `AuthBloc`-a.
+- HTTP rute servera za blokade ne postoje dok se ne urade T44 i T47. Klijent (`HttpScheduleRepository`) je proveren samo sa `MockClient`-om, a pravilo na serveru direktno nad bazom.
+
+**Odbačeno.**
+- *Blokada preko potvrđene rezervacije koja otkazuje rezervaciju.* Korisnik bi izgubio termin bez svoje volje. Vlasnik prvo otkaže rezervaciju (sa razlogom), pa tek onda blokira.
+- *Provera samo u klijentu.* Dva vlasnika ili vlasnik i korisnik mogu istovremeno da menjaju isti teren, pa konačnu reč ima server.

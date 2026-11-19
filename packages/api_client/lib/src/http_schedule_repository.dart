@@ -61,4 +61,10 @@ final class HttpScheduleRepository implements FieldScheduleRepository {
     );
     return readBody(json, (o) => BlockedPeriodDto.fromJson(o).toDomain());
   }
+
+  /// Blokada se briše sa terena na adresi, pa tuđa ne može da se obriše preko pogrešnog terena.
+  @override
+  Future<void> removeBlockedPeriod(FieldId fieldId, BlockedPeriodId id) async {
+    await _api.delete(ApiPaths.blockedPeriod(fieldId.value, id.value));
+  }
 }

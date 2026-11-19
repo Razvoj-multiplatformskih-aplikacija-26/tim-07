@@ -137,8 +137,10 @@ final class MySqlSportsFieldRepository implements SportsFieldRepository {
 
 final class MySqlFieldScheduleRepository implements FieldScheduleRepository {
   final Database _db;
+  final DateTime Function() _clock;
 
-  MySqlFieldScheduleRepository(this._db);
+  MySqlFieldScheduleRepository(this._db, {DateTime Function()? clock})
+      : _clock = clock ?? DateTime.now;
 
   @override
   Future<List<FieldSchedule>> getSchedules(FieldId fieldId) async {
@@ -185,7 +187,7 @@ final class MySqlFieldScheduleRepository implements FieldScheduleRepository {
     DateTime? to,
   }) async {
     final rows = await _db.query(
-      'SELECT field_id, start_time, end_time, reason FROM blocked_periods '
+      'SELECT id, field_id, start_time, end_time, reason FROM blocked_periods '
       'WHERE field_id = ? AND (? IS NULL OR end_time > ?) AND (? IS NULL OR start_time < ?) '
       'ORDER BY start_time',
       [
@@ -197,18 +199,60 @@ final class MySqlFieldScheduleRepository implements FieldScheduleRepository {
     return [for (final row in rows) Rows.blockedPeriod(row)];
   }
 
+  /// Blokira teren. Pravilo je isto kao u klijentu (`validateBlockedPeriod`), a
+  /// proverava se u transakciji koja prvo zaključava teren, kao i pravljenje
+  /// rezervacije, pa blokada i rezervacija istog termina ne mogu da prođu istovremeno.
   @override
-  Future<BlockedPeriod> addBlockedPeriod(BlockedPeriod period) async {
-    await _db.query(
-      'INSERT INTO blocked_periods (field_id, start_time, end_time, reason) VALUES (?, ?, ?, ?)',
-      [period.fieldId.value, Rows.utc(period.startTime), Rows.utc(period.endTime), period.reason],
+  Future<BlockedPeriod> addBlockedPeriod(BlockedPeriod period) {
+    return _db.transaction((tx) async {
+      final field = await tx.query('SELECT id FROM sports_fields WHERE id = ? FOR UPDATE', [period.fieldId.value]);
+      if (field.isEmpty) {
+        throw EntityNotFound('field', period.fieldId.value);
+      }
+
+      final now = _clock();
+      final rows = await tx.query(
+        "SELECT ${Rows.reservationColumns} FROM reservations r WHERE r.field_id = ? "
+        "AND r.status = 'confirmed' AND r.start_time < ? AND r.end_time > ?",
+        [period.fieldId.value, Rows.utc(period.endTime), Rows.utc(period.startTime)],
+      );
+      // Potvrđena rezervacija koja je u međuvremenu sama otkazana ili završena ne smeta.
+      final confirmed = [
+        for (final row in rows)
+          Rows.reservation(row).copyWith(status: resolveReservationStatus(Rows.reservation(row), now)),
+      ];
+
+      final error = validateBlockedPeriod(
+        fieldId: period.fieldId,
+        startTime: period.startTime,
+        endTime: period.endTime,
+        now: now,
+        reservations: confirmed,
+      );
+      if (error != null) throw BlockedPeriodRuleViolation(error);
+
+      final result = await tx.query(
+        'INSERT INTO blocked_periods (field_id, start_time, end_time, reason) VALUES (?, ?, ?, ?)',
+        [period.fieldId.value, Rows.utc(period.startTime), Rows.utc(period.endTime), period.reason],
+      );
+      final saved = await tx.query(
+        'SELECT id, field_id, start_time, end_time, reason FROM blocked_periods WHERE id = ?',
+        [result.insertId],
+      );
+      return Rows.blockedPeriod(saved.first);
+    });
+  }
+
+  @override
+  Future<void> removeBlockedPeriod(FieldId fieldId, BlockedPeriodId id) async {
+    // Blokada se briše samo sa terena na kome je, pa tuđa blokada ne može da se obriše preko pogrešnog terena.
+    final result = await _db.query(
+      'DELETE FROM blocked_periods WHERE id = ? AND field_id = ?',
+      [id.value, fieldId.value],
     );
-    return BlockedPeriod(
-      fieldId: period.fieldId,
-      startTime: Rows.utc(period.startTime),
-      endTime: Rows.utc(period.endTime),
-      reason: period.reason,
-    );
+    if (result.affectedRows == 0) {
+      throw EntityNotFound('blocked period', id.value);
+    }
   }
 }
 

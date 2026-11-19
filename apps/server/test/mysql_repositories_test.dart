@@ -31,7 +31,7 @@ void main() {
     await insertFixtures(db);
     reservations = MySqlReservationRepository(db, clock: () => now);
     fields = MySqlSportsFieldRepository(db);
-    schedules = MySqlFieldScheduleRepository(db);
+    schedules = MySqlFieldScheduleRepository(db, clock: () => now);
     users = MySqlUserRepository(db);
   });
 
@@ -39,6 +39,10 @@ void main() {
 
   Matcher violates<T extends ReservationValidationError>() => throwsA(
         isA<ReservationRuleViolation>().having((e) => e.error, 'error', isA<T>()),
+      );
+
+  Matcher blockViolates<T extends BlockedPeriodError>() => throwsA(
+        isA<BlockedPeriodRuleViolation>().having((e) => e.error, 'error', isA<T>()),
       );
 
   group('MySqlReservationRepository', () {
@@ -303,6 +307,168 @@ void main() {
 
       expect(await schedules.getBlockedPeriods(FieldId(1)), hasLength(2));
       expect(await schedules.getBlockedPeriods(FieldId(1), from: at(5, 0), to: at(6, 0)), hasLength(1));
+    });
+  });
+
+  group('blokade terena', () {
+    BlockedPeriod block(int fieldId, DateTime start, DateTime end, [String? reason]) => BlockedPeriod(
+          fieldId: FieldId(fieldId),
+          startTime: start,
+          endTime: end,
+          reason: reason,
+        );
+
+    test('blokada dobija identifikator i čita se sa njim', () async {
+      if (testDb == null) return;
+
+      final saved = await schedules.addBlockedPeriod(block(1, at(5, 12), at(5, 14), 'Održavanje'));
+
+      expect(saved.id, isNotNull);
+      expect(saved.reason, 'Održavanje');
+      expect(saved.startTime, at(5, 12).toUtc());
+      final stored = await schedules.getBlockedPeriods(FieldId(1));
+      expect(stored.single.id, saved.id);
+    });
+
+    test('kraj pre početka i prošli period se odbijaju, ništa se ne upisuje', () async {
+      if (testDb == null) return;
+
+      await expectLater(schedules.addBlockedPeriod(block(1, at(5, 14), at(5, 12))), blockViolates<InvalidBlockRange>());
+      await expectLater(schedules.addBlockedPeriod(block(1, at(2, 10), at(2, 12))), blockViolates<BlockInPast>());
+
+      expect(await schedules.getBlockedPeriods(FieldId(1)), isEmpty);
+    });
+
+    test('blokada preko potvrđene rezervacije se odbija sa razlogom, ništa se ne upisuje', () async {
+      if (testDb == null) return;
+      // Teren 2 potvrđuje automatski.
+      final confirmed = await reservations.createReservation(
+        fieldId: FieldId(2), userId: UserId(1), startTime: at(4, 18), endTime: at(4, 19),
+      );
+      expect(confirmed.status, ReservationStatus.confirmed);
+
+      await expectLater(
+        schedules.addBlockedPeriod(block(2, at(4, 17), at(4, 20))),
+        blockViolates<BlockOverlapsConfirmedReservation>(),
+      );
+      // Rezervacija i dalje važi.
+      expect((await reservations.getReservationById(confirmed.id))!.status, ReservationStatus.confirmed);
+      expect(await schedules.getBlockedPeriods(FieldId(2)), isEmpty);
+    });
+
+    test('blokada pored potvrđene rezervacije (bez preklapanja) prolazi', () async {
+      if (testDb == null) return;
+      await reservations.createReservation(
+        fieldId: FieldId(2), userId: UserId(1), startTime: at(4, 18), endTime: at(4, 19),
+      );
+
+      final saved = await schedules.addBlockedPeriod(block(2, at(4, 19), at(4, 21)));
+
+      expect(saved.id, isNotNull);
+    });
+
+    test('rezervacija na čekanju ne smeta blokadi, vlasnik je može odbiti', () async {
+      if (testDb == null) return;
+      // Teren 1 traži ručnu potvrdu, pa je rezervacija na čekanju.
+      final pending = await reservations.createReservation(
+        fieldId: FieldId(1), userId: UserId(1), startTime: at(4, 18), endTime: at(4, 19),
+      );
+      expect(pending.status, ReservationStatus.pending);
+
+      final saved = await schedules.addBlockedPeriod(block(1, at(4, 17), at(4, 20)));
+
+      expect(saved.id, isNotNull);
+    });
+
+    test('otkazana rezervacija ne smeta blokadi', () async {
+      if (testDb == null) return;
+      final confirmed = await reservations.createReservation(
+        fieldId: FieldId(2), userId: UserId(1), startTime: at(4, 18), endTime: at(4, 19),
+      );
+      await reservations.cancelReservation(confirmed.id);
+
+      final saved = await schedules.addBlockedPeriod(block(2, at(4, 17), at(4, 20)));
+
+      expect(saved.id, isNotNull);
+    });
+
+    test('potvrđena rezervacija koja je u međuvremenu sama otkazana (rok je prošao) ne smeta', () async {
+      if (testDb == null) return;
+      await reservations.createReservation(
+        fieldId: FieldId(2), userId: UserId(1), startTime: at(3, 12), endTime: at(3, 13),
+      );
+      // Rok je 5 sati pre početka, a korisnik nije potvrdio dolazak.
+      now = at(3, 11);
+
+      final saved = await schedules.addBlockedPeriod(block(2, at(3, 11, 30), at(3, 14)));
+
+      expect(saved.id, isNotNull);
+    });
+
+    test('posle blokade nova rezervacija u tom periodu se odbija, a posle brisanja prolazi', () async {
+      if (testDb == null) return;
+      final saved = await schedules.addBlockedPeriod(block(2, at(4, 18), at(4, 20)));
+
+      await expectLater(
+        reservations.createReservation(
+          fieldId: FieldId(2), userId: UserId(1), startTime: at(4, 19), endTime: at(4, 20),
+        ),
+        violates<FieldBlocked>(),
+      );
+
+      await schedules.removeBlockedPeriod(FieldId(2), saved.id!);
+      final created = await reservations.createReservation(
+        fieldId: FieldId(2), userId: UserId(1), startTime: at(4, 19), endTime: at(4, 20),
+      );
+
+      expect(created.status, ReservationStatus.confirmed);
+      expect(await schedules.getBlockedPeriods(FieldId(2)), isEmpty);
+    });
+
+    test('blokada se briše samo sa svog terena', () async {
+      if (testDb == null) return;
+      final saved = await schedules.addBlockedPeriod(block(1, at(5, 12), at(5, 14)));
+
+      await expectLater(
+        schedules.removeBlockedPeriod(FieldId(2), saved.id!),
+        throwsA(isA<EntityNotFound>()),
+      );
+      expect(await schedules.getBlockedPeriods(FieldId(1)), hasLength(1));
+
+      await schedules.removeBlockedPeriod(FieldId(1), saved.id!);
+      expect(await schedules.getBlockedPeriods(FieldId(1)), isEmpty);
+    });
+
+    test('nepostojeća blokada i nepostojeći teren', () async {
+      if (testDb == null) return;
+
+      await expectLater(
+        schedules.removeBlockedPeriod(FieldId(1), const BlockedPeriodId(999)),
+        throwsA(isA<EntityNotFound>()),
+      );
+      await expectLater(
+        schedules.addBlockedPeriod(block(999, at(5, 12), at(5, 14))),
+        throwsA(isA<EntityNotFound>()),
+      );
+    });
+
+    test('istovremena blokada i rezervacija istog termina: prolazi samo jedno', () async {
+      if (testDb == null) return;
+
+      final results = await Future.wait([
+        reservations
+            .createReservation(fieldId: FieldId(2), userId: UserId(1), startTime: at(4, 18), endTime: at(4, 19))
+            .then<Object?>((value) => value, onError: (Object error) => error),
+        schedules
+            .addBlockedPeriod(block(2, at(4, 18), at(4, 19)))
+            .then<Object?>((value) => value, onError: (Object error) => error),
+      ]);
+
+      final succeeded = results.where((r) => r is Reservation || r is BlockedPeriod);
+      expect(succeeded, hasLength(1), reason: '$results');
+      // Onaj koji nije prošao dobija pravilo iz domena, ne nepoznatu grešku.
+      final failed = results.singleWhere((r) => r is! Reservation && r is! BlockedPeriod);
+      expect(failed, anyOf(isA<ReservationRuleViolation>(), isA<BlockedPeriodRuleViolation>()));
     });
   });
 

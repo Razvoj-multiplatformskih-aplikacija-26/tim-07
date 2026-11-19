@@ -1,10 +1,10 @@
-import 'package:backoffice/app.dart';
 import 'package:backoffice/data/backoffice_repository.dart';
 import 'package:backoffice/widgets/reservation_details_panel.dart';
 import 'package:backoffice/widgets/reservations_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support.dart';
 
 void main() {
   const wide = Size(1600, 1000);
@@ -21,7 +21,7 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      BackofficeApp(repository: createBackofficeRepository(delay: Duration.zero)),
+      backofficeApp(createBackofficeRepository(delay: Duration.zero)),
     );
     await tester.pumpAndSettle();
   }

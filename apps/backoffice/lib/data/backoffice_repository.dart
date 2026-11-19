@@ -1,4 +1,5 @@
 import 'package:blocs/blocs.dart';
+import 'package:domain/domain.dart';
 
 import 'backoffice_demo_data.dart';
 import 'backoffice_fake_repository.dart';
@@ -18,4 +19,23 @@ BackofficeFakeReservationRepository createBackofficeRepository({
   );
 
   return BackofficeFakeReservationRepository(store, delay: delay);
+}
+
+/// Tereni iz memorije, dok backoffice nema server (T53).
+SportsFieldRepository createBackofficeFieldRepository() {
+  return FakeSportsFieldRepository(fields: BackofficeDemoData.fields);
+}
+
+/// Radno vreme i blokade iz memorije. Blokada se proverava nad rezervacijama
+/// koje vidi i tabela rezervacija, pa ne može preko potvrđene rezervacije.
+FieldScheduleRepository createBackofficeScheduleRepository({
+  required BackofficeFakeReservationRepository reservations,
+  DateTime Function()? clock,
+}) {
+  return FakeFieldScheduleRepository(
+    schedules: BackofficeDemoData.schedules,
+    blockedPeriods: BackofficeDemoData.blockedPeriods,
+    reservations: reservations.store,
+    clock: clock,
+  );
 }

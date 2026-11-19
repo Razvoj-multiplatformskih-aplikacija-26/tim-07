@@ -149,6 +149,7 @@ extension ScheduleDtoMapping on ScheduleDto {
 
 extension BlockedPeriodMapping on BlockedPeriod {
   BlockedPeriodDto toDto() => BlockedPeriodDto(
+    id: id?.value,
     fieldId: fieldId.value,
     startTime: startTime,
     endTime: endTime,
@@ -158,6 +159,7 @@ extension BlockedPeriodMapping on BlockedPeriod {
 
 extension BlockedPeriodDtoMapping on BlockedPeriodDto {
   BlockedPeriod toDomain() => BlockedPeriod(
+    id: id == null ? null : BlockedPeriodId(id!),
     fieldId: FieldId(fieldId),
     startTime: startTime,
     endTime: endTime,

@@ -20,6 +20,10 @@ abstract final class ApiPaths {
   static String blockedPeriods(int fieldId) =>
       '${field(fieldId)}/blocked-periods';
 
+  /// Jedna blokada terena (brisanje).
+  static String blockedPeriod(int fieldId, int id) =>
+      '${blockedPeriods(fieldId)}/$id';
+
   /// Administrator odobrava ili odbija objavljivanje terena.
   static String fieldReview(int fieldId) => '${field(fieldId)}/review';
 
