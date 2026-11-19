@@ -69,7 +69,7 @@ class _BackofficeAppState extends State<BackofficeApp> {
     }
   }
 
-  Widget _workspace(AppUser owner) => MultiBlocProvider(
+    Widget _workspace(AppUser owner) => MultiBlocProvider(
     key: ValueKey(owner.id),
     providers: [
       BlocProvider(
@@ -87,6 +87,13 @@ class _BackofficeAppState extends State<BackofficeApp> {
           reservations: widget.repository,
           owner: owner,
         )..add(const CalendarStarted()),
+      ),
+      BlocProvider(
+        create: (_) => FieldManagementBloc(
+          fields: widget.fieldRepository,
+          schedules: widget.scheduleRepository,
+          owner: owner,
+        )..add(const FieldManagementStarted()),
       ),
     ],
     child: const BackofficeShell(),

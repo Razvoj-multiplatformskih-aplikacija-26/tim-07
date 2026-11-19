@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../screens/blocked_periods_page.dart';
 import '../screens/calendar_page.dart';
+import '../screens/fields_page.dart';
 import '../screens/placeholder_page.dart';
 import '../screens/reservations_page.dart';
 import '../widgets/simulation_menu.dart';
@@ -50,10 +51,7 @@ class _BackofficeShellState extends State<BackofficeShell> {
     return switch (index) {
       0 => const ReservationsPage(),
       1 => const CalendarPage(),
-      2 => const PlaceholderPage(
-          title: 'Tereni',
-          message: 'Upravljanje terenima biće dodato u narednim taskovima.',
-        ),
+      2 => const FieldsPage(),
       3 => const BlockedPeriodsPage(),
       _ => const PlaceholderPage(
           title: 'Statistika',
