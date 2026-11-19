@@ -39,9 +39,7 @@ void main() {
     await tester.tap(find.text('Statistika'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Statistika zauzetosti biće dodata u narednim taskovima.'),
-      findsOneWidget,
-    );
+    expect(find.text('Ukupna zauzetost'), findsOneWidget);
+    expect(find.text('Po terenima'), findsOneWidget);
   });
 }

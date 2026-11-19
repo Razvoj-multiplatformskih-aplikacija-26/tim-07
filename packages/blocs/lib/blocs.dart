@@ -20,3 +20,5 @@ export 'src/repositories/fake_field_schedule_repository.dart';
 export 'src/blocked_periods/blocked_periods_bloc.dart';
 export 'src/field_management/field_management_bloc.dart';
 export 'src/calendar/calendar_bloc.dart';
+export 'src/statistics/statistics_bloc.dart';
+export 'src/field_review/field_review_bloc.dart';

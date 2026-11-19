@@ -14,6 +14,7 @@ void main() {
       fieldRepository: HttpFieldRepository(api),
       scheduleRepository: HttpScheduleRepository(api),
       authRepository: HttpSessionRepository(api),
+      statisticsRepository: HttpStatisticsRepository(api),
     ),
   );
 }
