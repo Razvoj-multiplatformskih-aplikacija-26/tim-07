@@ -81,52 +81,67 @@ class _BackofficeShellState extends State<BackofficeShell> {
     final sections = _sectionsFor(context.read<AppUser>());
     final selected = _selectedIndex < sections.length ? _selectedIndex : 0;
 
-    return Scaffold(
-      body: Row(
-        children: [
-          NavigationRail(
-            selectedIndex: selected,
-            onDestinationSelected: (index) {
-              setState(() => _selectedIndex = index);
-            },
-            labelType: NavigationRailLabelType.all,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Icon(
-                Icons.sports_soccer,
-                size: 32,
-                color: colors.primary,
-              ),
-            ),
-            trailing: const Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(padding: EdgeInsets.only(bottom: 16), child: _Account()),
-              ),
-            ),
-            destinations: [
-              for (final section in sections)
-                NavigationRailDestination(
-                  icon: Icon(section.icon),
-                  selectedIcon: Icon(section.selectedIcon),
-                  label: Text(section.label),
+    // Akcije nad rezervacijom se pokreću iz Rezervacija i iz Kalendara. Kada ih
+    // server ili pravilo odbije (nemate pravo, termin zauzet, rok istekao...),
+    // razlog se ovde prikaže na svakoj stranici, da korisnik nikad ne ostane bez
+    // odgovora. Tabela i kalendar se osvežavaju na svojim stranicama.
+    return BlocListener<ReservationBloc, ReservationState>(
+      listenWhen: (previous, current) => current is ReservationError,
+      listener: (context, state) => ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text((state as ReservationError).message)),
+        ),
+      child: Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: selected,
+              onDestinationSelected: (index) {
+                setState(() => _selectedIndex = index);
+              },
+              labelType: NavigationRailLabelType.all,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Icon(
+                  Icons.sports_soccer,
+                  size: 32,
+                  color: colors.primary,
                 ),
-            ],
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            child: Column(
-              children: [
-                _Header(
-                  title: sections[selected].label,
-                  showSimulation: selected == 0,
+              ),
+              trailing: const Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: _Account(),
+                  ),
                 ),
-                const Divider(height: 1),
-                Expanded(child: sections[selected].page),
+              ),
+              destinations: [
+                for (final section in sections)
+                  NavigationRailDestination(
+                    icon: Icon(section.icon),
+                    selectedIcon: Icon(section.selectedIcon),
+                    label: Text(section.label),
+                  ),
               ],
             ),
-          ),
-        ],
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: Column(
+                children: [
+                  _Header(
+                    title: sections[selected].label,
+                    showSimulation: selected == 0,
+                  ),
+                  const Divider(height: 1),
+                  Expanded(child: sections[selected].page),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
